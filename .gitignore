@@ -1,0 +1,17 @@
+# Build output
+target/
+*/target/
+
+# Runtime uploads and logs
+uploads/
+*/uploads/
+*.log
+
+# OS/editor noise
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local environment
+.env
+*.local

@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zane.mapper.RepairApplicationMapper">
+
+    <sql id="RepairSelectColumns">
+        r.id,
+        r.student_id,
+        r.reason,
+        r.photo_url,
+        r.dorm_building,
+        r.dorm_room,
+        r.status,
+        r.auditor_id,
+        r.audit_opinion,
+        r.audit_time,
+        r.repairman_phone,
+        r.score,
+        r.comment,
+        r.comment_time,
+        r.created_at,
+        r.updated_at,
+        s.real_name AS student_name,
+        sp.student_no AS student_no,
+        a.real_name AS auditor_name
+    </sql>
+
+    <select id="findById" resultType="RepairApplication">
+        SELECT
+        <include refid="RepairSelectColumns"/>
+        FROM repair_applications r
+        JOIN users s ON r.student_id = s.id
+        LEFT JOIN student_profiles sp ON s.id = sp.user_id
+        LEFT JOIN users a ON r.auditor_id = a.id
+        WHERE r.id = #{id}
+    </select>
+
+    <select id="findByStudentPage" resultType="RepairApplication">
+        SELECT
+        <include refid="RepairSelectColumns"/>
+        FROM repair_applications r
+        JOIN users s ON r.student_id = s.id
+        LEFT JOIN student_profiles sp ON s.id = sp.user_id
+        LEFT JOIN users a ON r.auditor_id = a.id
+        WHERE r.student_id = #{studentId}
+        <if test="status != null and status != ''">
+            AND r.status = #{status}
+        </if>
+        ORDER BY r.created_at DESC, r.id DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countByStudent" resultType="long">
+        SELECT COUNT(*)
+        FROM repair_applications
+        WHERE student_id = #{studentId}
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+    </select>
+
+    <select id="findAuditPage" resultType="RepairApplication">
+        SELECT
+        <include refid="RepairSelectColumns"/>
+        FROM repair_applications r
+        JOIN users s ON r.student_id = s.id
+        LEFT JOIN student_profiles sp ON s.id = sp.user_id
+        LEFT JOIN users a ON r.auditor_id = a.id
+        WHERE 1 = 1
+        <if test="status != null and status != ''">
+            AND r.status = #{status}
+        </if>
+        <if test="studentName != null and studentName != ''">
+            AND s.real_name LIKE CONCAT('%', #{studentName}, '%')
+        </if>
+        <if test="dormBuilding != null and dormBuilding != ''">
+            AND r.dorm_building = #{dormBuilding}
+        </if>
+        ORDER BY r.created_at DESC, r.id DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countAudit" resultType="long">
+        SELECT COUNT(*)
+        FROM repair_applications r
+        JOIN users s ON r.student_id = s.id
+        WHERE 1 = 1
+        <if test="status != null and status != ''">
+            AND r.status = #{status}
+        </if>
+        <if test="studentName != null and studentName != ''">
+            AND s.real_name LIKE CONCAT('%', #{studentName}, '%')
+        </if>
+        <if test="dormBuilding != null and dormBuilding != ''">
+            AND r.dorm_building = #{dormBuilding}
+        </if>
+    </select>
+
+    <insert id="insert" parameterType="RepairApplication" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO repair_applications (student_id, reason, photo_url, dorm_building, dorm_room, status)
+        VALUES (#{studentId}, #{reason}, #{photoUrl}, #{dormBuilding}, #{dormRoom}, #{status})
+    </insert>
+
+    <update id="cancelByStudent">
+        UPDATE repair_applications
+        SET status = 'CANCELED'
+        WHERE id = #{id}
+          AND student_id = #{studentId}
+          AND status = 'PENDING'
+    </update>
+
+    <update id="auditByAdmin">
+        UPDATE repair_applications
+        SET status = #{status},
+            auditor_id = #{auditorId},
+            repairman_phone = #{repairmanPhone},
+            audit_opinion = #{auditOpinion},
+            audit_time = NOW()
+        WHERE id = #{id}
+          AND status = 'PENDING'
+    </update>
+
+    <update id="updateStatus">
+        UPDATE repair_applications
+        SET status = #{status}
+        WHERE id = #{id}
+    </update>
+
+    <update id="completeByStudent">
+        UPDATE repair_applications
+        SET status = 'COMPLETED'
+        WHERE id = #{id}
+          AND student_id = #{studentId}
+          AND status IN ('APPROVED', 'REPAIRING')
+    </update>
+
+    <update id="rateByStudent">
+        UPDATE repair_applications
+        SET status = 'RATED',
+            score = #{score},
+            comment = #{comment},
+            comment_time = NOW()
+        WHERE id = #{id}
+          AND student_id = #{studentId}
+          AND status = 'COMPLETED'
+    </update>
+
+</mapper>

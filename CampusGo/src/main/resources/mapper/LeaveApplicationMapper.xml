@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zane.mapper.LeaveApplicationMapper">
+
+    <sql id="LeaveSelectColumns">
+        l.id,
+        l.student_id,
+        l.college,
+        l.reason,
+        l.start_time,
+        l.end_time,
+        l.status,
+        l.auditor_id,
+        l.audit_opinion,
+        l.audit_time,
+        l.return_time,
+        l.created_at,
+        l.updated_at,
+        s.real_name AS student_name,
+        sp.student_no AS student_no,
+        a.real_name AS auditor_name
+    </sql>
+
+    <select id="findById" resultType="LeaveApplication">
+        SELECT
+        <include refid="LeaveSelectColumns"/>
+        FROM leave_applications l
+        JOIN users s ON l.student_id = s.id
+        LEFT JOIN student_profiles sp ON s.id = sp.user_id
+        LEFT JOIN users a ON l.auditor_id = a.id
+        WHERE l.id = #{id}
+    </select>
+
+    <select id="findByStudentPage" resultType="LeaveApplication">
+        SELECT
+        <include refid="LeaveSelectColumns"/>
+        FROM leave_applications l
+        JOIN users s ON l.student_id = s.id
+        LEFT JOIN student_profiles sp ON s.id = sp.user_id
+        LEFT JOIN users a ON l.auditor_id = a.id
+        WHERE l.student_id = #{studentId}
+        <if test="status != null and status != ''">
+            AND l.status = #{status}
+        </if>
+        ORDER BY l.created_at DESC, l.id DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countByStudent" resultType="long">
+        SELECT COUNT(*)
+        FROM leave_applications
+        WHERE student_id = #{studentId}
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+    </select>
+
+    <select id="findByCollegePage" resultType="LeaveApplication">
+        SELECT
+        <include refid="LeaveSelectColumns"/>
+        FROM leave_applications l
+        JOIN users s ON l.student_id = s.id
+        LEFT JOIN student_profiles sp ON s.id = sp.user_id
+        LEFT JOIN users a ON l.auditor_id = a.id
+        WHERE l.college = #{college}
+        <if test="status != null and status != ''">
+            AND l.status = #{status}
+        </if>
+        <if test="studentName != null and studentName != ''">
+            AND s.real_name LIKE CONCAT('%', #{studentName}, '%')
+        </if>
+        ORDER BY l.created_at DESC, l.id DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countByCollege" resultType="long">
+        SELECT COUNT(*)
+        FROM leave_applications l
+        JOIN users s ON l.student_id = s.id
+        WHERE l.college = #{college}
+        <if test="status != null and status != ''">
+            AND l.status = #{status}
+        </if>
+        <if test="studentName != null and studentName != ''">
+            AND s.real_name LIKE CONCAT('%', #{studentName}, '%')
+        </if>
+    </select>
+
+    <insert id="insert" parameterType="LeaveApplication" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO leave_applications (student_id, college, reason, start_time, end_time, status)
+        VALUES (#{studentId}, #{college}, #{reason}, #{startTime}, #{endTime}, #{status})
+    </insert>
+
+    <update id="cancelByStudent">
+        UPDATE leave_applications
+        SET status = 'CANCELED'
+        WHERE id = #{id}
+          AND student_id = #{studentId}
+          AND status = 'PENDING'
+    </update>
+
+    <update id="returnByStudent">
+        UPDATE leave_applications
+        SET status = 'RETURNED',
+            return_time = NOW()
+        WHERE id = #{id}
+          AND student_id = #{studentId}
+          AND status = 'APPROVED'
+    </update>
+
+    <update id="auditByTeacher">
+        UPDATE leave_applications
+        SET status = #{status},
+            auditor_id = #{auditorId},
+            audit_opinion = #{auditOpinion},
+            audit_time = NOW()
+        WHERE id = #{id}
+          AND college = #{college}
+          AND status = 'PENDING'
+    </update>
+
+</mapper>

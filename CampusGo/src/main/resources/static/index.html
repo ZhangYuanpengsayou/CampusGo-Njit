@@ -1,0 +1,922 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CampusGo 高校学生事务中心</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://unpkg.com">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/campusgo.css?v=20260607-navbar">
+</head>
+<body>
+<div id="app" v-cloak>
+    <nav class="cg-navbar navbar navbar-expand-lg sticky-top">
+        <div class="container-xl">
+            <a class="navbar-brand cg-brand" href="#" @click.prevent="goHome">
+                <img class="cg-brand-logo" src="/assets/logo/campusgo-logo.jpeg" alt="CampusGo">
+                <span>CampusGo</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="mainNav">
+                <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
+                    <li class="nav-item">
+                        <a class="nav-link" :class="{active: view === 'home'}" href="#" @click.prevent="goHome">公告</a>
+                    </li>
+                    <template v-if="currentUser">
+                        <li class="nav-item" v-if="currentUser.role === roles.STUDENT">
+                            <a class="nav-link" :class="{active: view === 'student'}" href="#" @click.prevent="showStudent">学生事务</a>
+                        </li>
+                        <li class="nav-item" v-if="currentUser.role === roles.TEACHER">
+                            <a class="nav-link" :class="{active: view === 'teacher'}" href="#" @click.prevent="showTeacher">请假审核</a>
+                        </li>
+                        <li class="nav-item" v-if="currentUser.role === roles.ADMIN">
+                            <a class="nav-link" :class="{active: view === 'admin'}" href="#" @click.prevent="showAdmin">管理中心</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" :class="{active: view === 'profile'}" href="#" @click.prevent="showProfile">个人中心</a>
+                        </li>
+                    </template>
+                </ul>
+                <div class="nav-actions ms-lg-3">
+                    <template v-if="currentUser">
+                        <span class="user-pill">{{ currentUser.realName }} · {{ roleText(currentUser.role) }}</span>
+                        <button class="btn btn-ghost btn-sm" @click="logout">
+                            <i data-lucide="log-out"></i>
+                            退出
+                        </button>
+                    </template>
+                    <template v-else>
+                        <button class="btn btn-ghost btn-sm" @click="showAuth('login')">登录</button>
+                        <button class="btn btn-primary-soft btn-sm" @click="showAuth('register')">注册</button>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <section v-if="view === 'home'" class="home-page">
+            <div id="heroCarousel" class="carousel slide hero-carousel" data-bs-ride="carousel" data-bs-interval="5200">
+                <div class="carousel-indicators hero-indicators">
+                    <button v-for="(item, index) in heroSlides()" :key="`hero-indicator-${item.id}`" type="button"
+                            data-bs-target="#heroCarousel" :data-bs-slide-to="index" :class="{active: index === 0}"
+                            :aria-current="index === 0 ? 'true' : null" :aria-label="`第 ${index + 1} 张`"></button>
+                </div>
+                <div class="carousel-inner">
+                    <div class="carousel-item hero-slide" v-for="(item, index) in heroSlides()" :key="item.id" :class="{active: index === 0}">
+                        <img class="hero-slide-img" :src="item.imageUrl" :alt="item.title">
+                        <div class="hero-overlay"></div>
+                        <div class="container-xl hero-content">
+                            <p class="eyebrow">CampusGo</p>
+                            <h1>{{ item.title }}</h1>
+                            <p class="hero-copy">{{ item.subtitle }}</p>
+                            <div class="hero-actions" v-if="!currentUser">
+                                <button class="btn btn-dark-pill" @click="showAuth('login')">
+                                    <i data-lucide="log-in"></i>
+                                    登录系统
+                                </button>
+                                <button class="btn btn-light-pill" @click="showAuth('register')">
+                                    <i data-lucide="user-plus"></i>
+                                    创建账号
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="carousel-control-prev hero-control" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev" v-if="heroSlides().length > 1">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">上一张</span>
+                </button>
+                <button class="carousel-control-next hero-control" type="button" data-bs-target="#heroCarousel" data-bs-slide="next" v-if="heroSlides().length > 1">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">下一张</span>
+                </button>
+            </div>
+
+            <div class="container-xl page-section">
+                <div class="section-heading">
+                    <div>
+                        <h2>最新公告</h2>
+                    </div>
+                    <div class="search-inline">
+                        <input class="form-control cg-input" v-model="announcementQuery.keyword" placeholder="搜索公告">
+                        <button class="btn btn-icon" @click="loadAnnouncements" title="搜索公告">
+                            <i data-lucide="search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="notice-grid">
+                    <article class="notice-card" v-for="item in announcements.list" :key="item.id" @click="openAnnouncement(item)">
+                        <span class="status-dot"></span>
+                        <h3>{{ item.title }}</h3>
+                        <p>{{ item.content }}</p>
+                        <div class="card-meta">
+                            <span>{{ item.publisherName || 'CampusGo' }}</span>
+                            <span>{{ formatDate(item.createdAt) }}</span>
+                        </div>
+                    </article>
+                    <div v-if="announcements.list.length === 0" class="empty-state">
+                        <i data-lucide="inbox"></i>
+                        暂无公告
+                    </div>
+                </div>
+                <div class="pager" v-if="hasPages(announcements, announcementQuery)">
+                    <button class="btn btn-mini secondary" :disabled="announcementQuery.page <= 1" @click="changePage('announcements', -1)">上一页</button>
+                    <span>{{ pageText(announcements, announcementQuery) }}</span>
+                    <button class="btn btn-mini secondary" :disabled="announcementQuery.page >= totalPages(announcements, announcementQuery)" @click="changePage('announcements', 1)">下一页</button>
+                </div>
+            </div>
+        </section>
+
+        <section v-if="view === 'auth'" class="container-xl auth-page">
+            <div class="auth-panel">
+                <div class="auth-copy">
+                    <h1>{{ authMode === 'login' ? '登录 CampusGo' : '创建 CampusGo 账号' }}</h1>
+                    <p>请选择角色并使用学校事务账号进入系统。学生与教师的学院信息来自管理员维护的学院列表。</p>
+                </div>
+                <div class="auth-form">
+                    <div class="segmented">
+                        <button :class="{active: authMode === 'login'}" @click="showAuth('login')">登录</button>
+                        <button :class="{active: authMode === 'register'}" @click="showAuth('register')">注册</button>
+                    </div>
+
+                    <form v-if="authMode === 'login'" @submit.prevent="login" class="form-stack">
+                        <label>账号<input class="form-control cg-input" v-model="loginForm.username" autocomplete="username"></label>
+                        <label>密码<input class="form-control cg-input" type="password" v-model="loginForm.password" autocomplete="current-password"></label>
+                        <button class="btn btn-primary-wide" type="submit" :disabled="loading">登录</button>
+                    </form>
+
+                    <form v-else @submit.prevent="register" class="form-stack">
+                        <label>角色
+                            <select class="form-select cg-input" v-model="registerForm.role">
+                                <option :value="roles.STUDENT">学生</option>
+                                <option :value="roles.TEACHER">教师</option>
+                                <option :value="roles.ADMIN">管理员</option>
+                            </select>
+                        </label>
+                        <div class="grid-2">
+                            <label>账号<input class="form-control cg-input" v-model="registerForm.username"></label>
+                            <label>密码<input class="form-control cg-input" type="password" v-model="registerForm.password"></label>
+                            <label>确认密码<input class="form-control cg-input" type="password" v-model="registerForm.confirmPassword"></label>
+                            <label>姓名<input class="form-control cg-input" v-model="registerForm.realName"></label>
+                            <label>手机<input class="form-control cg-input" v-model="registerForm.phone"></label>
+                            <label>邮箱<input class="form-control cg-input" v-model="registerForm.email"></label>
+                            <label v-if="registerForm.role === roles.TEACHER || registerForm.role === roles.ADMIN">申请码
+                                <input class="form-control cg-input" v-model="registerForm.applicationCode" placeholder="请输入申请码">
+                            </label>
+                            <label v-if="registerForm.role !== roles.ADMIN">学院
+                                <select class="form-select cg-input" v-model="registerForm.college" @change="onRegisterCollegeChange">
+                                    <option value="">请选择学院</option>
+                                    <option v-for="college in colleges" :key="college.id" :value="college.name">{{ college.name }}</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div v-if="registerForm.role === roles.STUDENT" class="grid-2">
+                            <label>学号<input class="form-control cg-input" v-model="registerForm.studentNo"></label>
+                            <label>专业
+                                <select class="form-select cg-input" v-model="registerForm.major" @change="onRegisterMajorChange">
+                                    <option value="">请选择专业</option>
+                                    <option v-for="major in majors" :key="major.id" :value="major.name">{{ major.name }}</option>
+                                </select>
+                            </label>
+                            <label>班级
+                                <select class="form-select cg-input" v-model="registerForm.className">
+                                    <option value="">请选择班级</option>
+                                    <option v-for="item in classes" :key="item.id" :value="item.name">{{ item.name }}</option>
+                                </select>
+                            </label>
+                            <label>公寓楼栋
+                                <select class="form-select cg-input" v-model="registerForm.dormBuilding" @change="onRegisterDormBuildingChange">
+                                    <option value="">请选择楼栋</option>
+                                    <option v-for="building in dormBuildings" :key="building.id" :value="building.name">{{ building.name }}</option>
+                                </select>
+                            </label>
+                            <label>宿舍号
+                                <select class="form-select cg-input" v-model="registerForm.dormRoom">
+                                    <option value="">请选择宿舍号</option>
+                                    <option v-for="room in dormRooms" :key="room.id" :value="room.roomNo">{{ room.roomNo }}</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div v-if="registerForm.role === roles.TEACHER" class="grid-2">
+                            <label>工号<input class="form-control cg-input" v-model="registerForm.teacherNo"></label>
+                            <label>职称<input class="form-control cg-input" v-model="registerForm.title"></label>
+                            <label>办公室<input class="form-control cg-input" v-model="registerForm.office"></label>
+                        </div>
+                        <div v-if="registerForm.role === roles.ADMIN" class="grid-2">
+                            <label>管理员编号<input class="form-control cg-input" v-model="registerForm.adminNo"></label>
+                            <label>管理部门<input class="form-control cg-input" v-model="registerForm.department"></label>
+                        </div>
+                        <button class="btn btn-primary-wide" type="submit" :disabled="loading">注册</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <section v-if="view === 'student'" class="container-xl workspace">
+            <div class="workspace-heading">
+                <div>
+                    <h1>学生事务</h1>
+                </div>
+                <div class="tabbar">
+                    <button :class="{active: studentTab === 'leave'}" @click="studentTab = 'leave'; loadMyLeaves()">请假</button>
+                    <button :class="{active: studentTab === 'repair'}" @click="studentTab = 'repair'; loadMyRepairs()">报修</button>
+                </div>
+            </div>
+
+            <div v-if="studentTab === 'leave'" class="module-layout">
+                <div class="form-card">
+                    <h2>新建请假</h2>
+                    <form @submit.prevent="createLeave" class="form-stack">
+                        <label>请假理由<textarea class="form-control cg-input" rows="4" v-model="leaveForm.reason"></textarea></label>
+                        <label>开始时间<input class="form-control cg-input" type="datetime-local" v-model="leaveForm.startTime"></label>
+                        <label>结束时间<input class="form-control cg-input" type="datetime-local" v-model="leaveForm.endTime"></label>
+                        <button class="btn btn-primary-wide" type="submit">提交申请</button>
+                    </form>
+                </div>
+                <div class="list-card">
+                    <div class="list-head">
+                        <h2>我的请假</h2>
+                        <select class="form-select cg-select" v-model="leaveQuery.status" @change="loadMyLeaves">
+                            <option value="">全部</option>
+                            <option v-for="status in leaveStatuses" :key="status" :value="status">{{ leaveStatusText(status) }}</option>
+                        </select>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table cg-table">
+                            <thead><tr><th>理由</th><th>时间</th><th>状态</th><th>操作</th></tr></thead>
+                            <tbody>
+                            <tr v-if="leaves.list.length === 0">
+                                <td colspan="4">
+                                    <div class="empty-state table-empty">
+                                        <i data-lucide="calendar-x"></i>
+                                        暂无请假记录
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr v-for="item in leaves.list" :key="item.id">
+                                <td>{{ item.reason }}</td>
+                                <td>{{ formatDate(item.startTime) }} 至 {{ formatDate(item.endTime) }}</td>
+                                <td><span class="state-badge" :class="stateClass(item.status)">{{ leaveStatusText(item.status) }}</span></td>
+                                <td class="table-actions">
+                                    <button class="btn btn-mini" v-if="item.status === 'PENDING'" @click="cancelLeave(item.id)">撤销</button>
+                                    <button class="btn btn-mini" v-if="item.status === 'APPROVED'" @click="returnLeave(item.id)">销假</button>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pager" v-if="hasPages(leaves, leaveQuery)">
+                        <button class="btn btn-mini secondary" :disabled="leaveQuery.page <= 1" @click="changePage('leaves', -1)">上一页</button>
+                        <span>{{ pageText(leaves, leaveQuery) }}</span>
+                        <button class="btn btn-mini secondary" :disabled="leaveQuery.page >= totalPages(leaves, leaveQuery)" @click="changePage('leaves', 1)">下一页</button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="studentTab === 'repair'" class="module-layout">
+                <div class="form-card">
+                    <h2>新建报修</h2>
+                    <form @submit.prevent="createRepair" class="form-stack">
+                        <label>报修事由<textarea class="form-control cg-input" rows="4" v-model="repairForm.reason"></textarea></label>
+                        <label>照片<input class="form-control cg-input" type="file" accept=".jpg,.jpeg,.png" @change="uploadRepairPhoto"></label>
+                        <div class="upload-preview" v-if="repairForm.photoUrl">
+                            <img :src="repairForm.photoUrl" alt="报修照片预览">
+                            <span>已上传</span>
+                        </div>
+                        <button class="btn btn-primary-wide" type="submit">提交报修</button>
+                    </form>
+                </div>
+                <div class="list-card">
+                    <div class="list-head">
+                        <h2>我的报修</h2>
+                        <select class="form-select cg-select" v-model="repairQuery.status" @change="loadMyRepairs">
+                            <option value="">全部</option>
+                            <option v-for="status in repairStatuses" :key="status" :value="status">{{ repairStatusText(status) }}</option>
+                        </select>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table cg-table">
+                            <thead><tr><th>事由</th><th>宿舍</th><th>状态</th><th>维修工</th><th>操作</th></tr></thead>
+                            <tbody>
+                            <tr v-if="repairs.list.length === 0">
+                                <td colspan="5">
+                                    <div class="empty-state table-empty">
+                                        <i data-lucide="wrench"></i>
+                                        暂无报修记录
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr v-for="item in repairs.list" :key="item.id">
+                                <td>{{ item.reason }}</td>
+                                <td>{{ item.dormBuilding || '-' }} {{ item.dormRoom || '' }}</td>
+                                <td><span class="state-badge" :class="stateClass(item.status)">{{ repairStatusText(item.status) }}</span></td>
+                                <td>{{ item.repairmanPhone || '-' }}</td>
+                                <td class="table-actions">
+                                    <button class="btn btn-mini" v-if="item.status === 'PENDING'" @click="cancelRepair(item.id)">撤销</button>
+                                    <button class="btn btn-mini" v-if="item.status === 'APPROVED' || item.status === 'REPAIRING'" @click="completeRepair(item.id)">确认完成</button>
+                                    <button class="btn btn-mini" v-if="item.status === 'COMPLETED'" @click="openRate(item)">评价</button>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pager" v-if="hasPages(repairs, repairQuery)">
+                        <button class="btn btn-mini secondary" :disabled="repairQuery.page <= 1" @click="changePage('repairs', -1)">上一页</button>
+                        <span>{{ pageText(repairs, repairQuery) }}</span>
+                        <button class="btn btn-mini secondary" :disabled="repairQuery.page >= totalPages(repairs, repairQuery)" @click="changePage('repairs', 1)">下一页</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section v-if="view === 'teacher'" class="container-xl workspace">
+            <div class="workspace-heading">
+                <div>
+                    <h1>请假审核</h1>
+                </div>
+                <div class="search-inline">
+                    <input class="form-control cg-input" v-model="auditLeaveQuery.studentName" placeholder="学生姓名">
+                    <select class="form-select cg-select" v-model="auditLeaveQuery.status">
+                        <option value="">全部</option>
+                        <option value="PENDING">待审核</option>
+                        <option value="APPROVED">通过</option>
+                        <option value="REJECTED">不通过</option>
+                    </select>
+                    <button class="btn btn-icon" @click="loadAuditLeaves" title="查询">
+                        <i data-lucide="search"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="list-card wide">
+                <div class="table-responsive">
+                    <table class="table cg-table">
+                        <thead><tr><th>学生</th><th>理由</th><th>时间</th><th>状态</th><th>操作</th></tr></thead>
+                        <tbody>
+                        <tr v-if="auditLeaves.list.length === 0">
+                            <td colspan="5">
+                                <div class="empty-state table-empty">
+                                    <i data-lucide="clipboard-check"></i>
+                                    暂无待处理请假
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-for="item in auditLeaves.list" :key="item.id">
+                            <td>{{ item.studentName }}<span class="muted-line">{{ item.studentNo }}</span></td>
+                            <td>{{ item.reason }}</td>
+                            <td>{{ formatDate(item.startTime) }} 至 {{ formatDate(item.endTime) }}</td>
+                            <td><span class="state-badge" :class="stateClass(item.status)">{{ leaveStatusText(item.status) }}</span></td>
+                            <td class="table-actions">
+                                <button class="btn btn-mini" v-if="item.status === 'PENDING'" @click="auditLeave(item.id, 'APPROVED')">通过</button>
+                                <button class="btn btn-mini secondary" v-if="item.status === 'PENDING'" @click="auditLeave(item.id, 'REJECTED')">不通过</button>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pager" v-if="hasPages(auditLeaves, auditLeaveQuery)">
+                    <button class="btn btn-mini secondary" :disabled="auditLeaveQuery.page <= 1" @click="changePage('auditLeaves', -1)">上一页</button>
+                    <span>{{ pageText(auditLeaves, auditLeaveQuery) }}</span>
+                    <button class="btn btn-mini secondary" :disabled="auditLeaveQuery.page >= totalPages(auditLeaves, auditLeaveQuery)" @click="changePage('auditLeaves', 1)">下一页</button>
+                </div>
+            </div>
+        </section>
+
+        <section v-if="view === 'admin'" class="container-xl workspace">
+            <div class="workspace-heading">
+                <div>
+                    <h1>管理中心</h1>
+                </div>
+                <div class="tabbar">
+                    <button :class="{active: adminTab === 'announcements'}" @click="adminTab = 'announcements'; loadAnnouncements()">公告</button>
+                    <button :class="{active: adminTab === 'carousels'}" @click="adminTab = 'carousels'; loadManageCarousels()">轮播</button>
+                    <button :class="{active: adminTab === 'colleges'}" @click="adminTab = 'colleges'; loadManageColleges(); loadManageMajors(); loadManageClasses()">学院</button>
+                    <button :class="{active: adminTab === 'dorms'}" @click="adminTab = 'dorms'; loadManageDormBuildings(); loadManageDormRooms()">宿舍</button>
+                    <button :class="{active: adminTab === 'repairs'}" @click="adminTab = 'repairs'; loadAuditRepairs()">报修</button>
+                </div>
+            </div>
+
+            <div v-if="adminTab === 'carousels'" class="module-layout">
+                <div class="form-card">
+                    <h2>{{ carouselForm.id ? '编辑轮播图' : '新增轮播图' }}</h2>
+                    <form @submit.prevent="saveCarousel" class="form-stack">
+                        <label>标题<input class="form-control cg-input" v-model="carouselForm.title"></label>
+                        <label>说明<textarea class="form-control cg-input" rows="4" v-model="carouselForm.subtitle"></textarea></label>
+                        <label>图片
+                            <input class="form-control cg-input" type="file" accept=".jpg,.jpeg,.png" @change="uploadCarouselImage">
+                        </label>
+                        <div class="upload-preview hero-preview" v-if="carouselForm.imageUrl">
+                            <img :src="carouselForm.imageUrl" alt="轮播图预览">
+                            <span>已选择图片</span>
+                        </div>
+                        <div class="grid-2">
+                            <label>排序<input class="form-control cg-input" type="number" v-model.number="carouselForm.sortOrder"></label>
+                            <label>状态
+                                <select class="form-select cg-input" v-model.number="carouselForm.status">
+                                    <option :value="1">启用</option>
+                                    <option :value="0">停用</option>
+                                </select>
+                            </label>
+                        </div>
+                        <button class="btn btn-primary-wide" type="submit">{{ carouselForm.id ? '保存修改' : '新增轮播图' }}</button>
+                        <button class="btn btn-ghost-wide" type="button" @click="resetCarouselForm">清空</button>
+                    </form>
+                </div>
+                <div class="list-card">
+                    <h2>轮播图列表</h2>
+                    <table class="table cg-table">
+                        <thead><tr><th>图片</th><th>标题</th><th>状态</th><th>操作</th></tr></thead>
+                        <tbody>
+                        <tr v-if="manageCarousels.length === 0">
+                            <td colspan="4">
+                                <div class="empty-state table-empty">
+                                    <i data-lucide="images"></i>
+                                    暂无轮播图
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-for="item in manageCarousels" :key="item.id">
+                            <td><img class="table-thumb" :src="item.imageUrl" :alt="item.title"></td>
+                            <td>{{ item.title }}<span class="muted-line">{{ item.subtitle || '-' }}</span><span class="muted-line">排序 {{ item.sortOrder }}</span></td>
+                            <td><span class="state-badge" :class="item.status === 1 ? 'ok' : 'muted'">{{ item.status === 1 ? '启用' : '停用' }}</span></td>
+                            <td class="table-actions">
+                                <button class="btn btn-mini" @click="editCarousel(item)">编辑</button>
+                                <button class="btn btn-mini danger" @click="deleteCarousel(item.id)">删除</button>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div v-if="adminTab === 'announcements'" class="module-layout">
+                <div class="form-card">
+                    <h2>{{ announcementForm.id ? '编辑公告' : '新增公告' }}</h2>
+                    <form @submit.prevent="saveAnnouncement" class="form-stack">
+                        <label>标题<input class="form-control cg-input" v-model="announcementForm.title"></label>
+                        <label>内容<textarea class="form-control cg-input" rows="5" v-model="announcementForm.content"></textarea></label>
+                        <button class="btn btn-primary-wide" type="submit">{{ announcementForm.id ? '保存修改' : '新增公告' }}</button>
+                        <button class="btn btn-ghost-wide" type="button" @click="resetAnnouncementForm">清空</button>
+                    </form>
+                </div>
+                <div class="list-card">
+                    <h2>公告列表</h2>
+                    <table class="table cg-table">
+                        <thead><tr><th>标题</th><th>发布时间</th><th>操作</th></tr></thead>
+                        <tbody>
+                        <tr v-if="announcements.list.length === 0">
+                            <td colspan="3">
+                                <div class="empty-state table-empty">
+                                    <i data-lucide="megaphone"></i>
+                                    暂无公告
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-for="item in announcements.list" :key="item.id">
+                            <td>{{ item.title }}</td>
+                            <td>{{ formatDate(item.createdAt) }}</td>
+                            <td class="table-actions">
+                                <button class="btn btn-mini" @click="editAnnouncement(item)">编辑</button>
+                                <button class="btn btn-mini danger" @click="deleteAnnouncement(item.id)">删除</button>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                    <div class="pager" v-if="hasPages(announcements, announcementQuery)">
+                        <button class="btn btn-mini secondary" :disabled="announcementQuery.page <= 1" @click="changePage('announcements', -1)">上一页</button>
+                        <span>{{ pageText(announcements, announcementQuery) }}</span>
+                        <button class="btn btn-mini secondary" :disabled="announcementQuery.page >= totalPages(announcements, announcementQuery)" @click="changePage('announcements', 1)">下一页</button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="adminTab === 'colleges'" class="module-layout">
+                <div class="form-card">
+                    <h2>{{ collegeForm.id ? '编辑学院' : '新增学院' }}</h2>
+                    <form @submit.prevent="saveCollege" class="form-stack">
+                        <label>学院名称<input class="form-control cg-input" v-model="collegeForm.name"></label>
+                        <label>说明<textarea class="form-control cg-input" rows="4" v-model="collegeForm.description"></textarea></label>
+                        <label>状态
+                            <select class="form-select cg-input" v-model.number="collegeForm.status">
+                                <option :value="1">启用</option>
+                                <option :value="0">停用</option>
+                            </select>
+                        </label>
+                        <button class="btn btn-primary-wide" type="submit">{{ collegeForm.id ? '保存修改' : '新增学院' }}</button>
+                        <button class="btn btn-ghost-wide" type="button" @click="resetCollegeForm">清空</button>
+                    </form>
+                </div>
+                <div class="list-card">
+                    <h2>学院列表</h2>
+                    <table class="table cg-table">
+                        <thead><tr><th>学院</th><th>状态</th><th>操作</th></tr></thead>
+                        <tbody>
+                        <tr v-if="manageColleges.length === 0">
+                            <td colspan="3">
+                                <div class="empty-state table-empty">
+                                    <i data-lucide="building-2"></i>
+                                    暂无学院数据
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-for="item in manageColleges" :key="item.id">
+                            <td>{{ item.name }}<span class="muted-line">{{ item.description }}</span></td>
+                            <td><span class="state-badge" :class="item.status === 1 ? 'ok' : 'muted'">{{ item.status === 1 ? '启用' : '停用' }}</span></td>
+                            <td><button class="btn btn-mini" @click="editCollege(item)">编辑</button></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div v-if="adminTab === 'colleges'" class="module-layout admin-secondary-layout">
+                <div class="form-card">
+                    <h2>{{ majorForm.id ? '编辑专业' : '新增专业' }}</h2>
+                    <form @submit.prevent="saveMajor" class="form-stack">
+                        <label>所属学院
+                            <select class="form-select cg-input" v-model="majorForm.collegeName">
+                                <option value="">请选择学院</option>
+                                <option v-for="college in colleges" :key="college.id" :value="college.name">{{ college.name }}</option>
+                            </select>
+                        </label>
+                        <label>专业名称<input class="form-control cg-input" v-model="majorForm.name"></label>
+                        <label>状态
+                            <select class="form-select cg-input" v-model.number="majorForm.status">
+                                <option :value="1">启用</option>
+                                <option :value="0">停用</option>
+                            </select>
+                        </label>
+                        <button class="btn btn-primary-wide" type="submit">{{ majorForm.id ? '保存修改' : '新增专业' }}</button>
+                        <button class="btn btn-ghost-wide" type="button" @click="resetMajorForm">清空</button>
+                    </form>
+                </div>
+                <div class="list-card">
+                    <h2>专业列表</h2>
+                    <table class="table cg-table">
+                        <thead><tr><th>学院 / 专业</th><th>状态</th><th>操作</th></tr></thead>
+                        <tbody>
+                        <tr v-if="manageMajors.length === 0">
+                            <td colspan="3">
+                                <div class="empty-state table-empty">
+                                    <i data-lucide="book-open"></i>
+                                    暂无专业数据
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-for="item in manageMajors" :key="item.id">
+                            <td>{{ item.name }}<span class="muted-line">{{ item.collegeName }}</span></td>
+                            <td><span class="state-badge" :class="item.status === 1 ? 'ok' : 'muted'">{{ item.status === 1 ? '启用' : '停用' }}</span></td>
+                            <td><button class="btn btn-mini" @click="editMajor(item)">编辑</button></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div v-if="adminTab === 'colleges'" class="module-layout admin-secondary-layout">
+                <div class="form-card">
+                    <h2>{{ classForm.id ? '编辑班级' : '新增班级' }}</h2>
+                    <form @submit.prevent="saveClassGroup" class="form-stack">
+                        <label>所属学院
+                            <select class="form-select cg-input" v-model="classForm.collegeName" @change="classForm.majorName = ''">
+                                <option value="">请选择学院</option>
+                                <option v-for="college in colleges" :key="college.id" :value="college.name">{{ college.name }}</option>
+                            </select>
+                        </label>
+                        <label>所属专业
+                            <select class="form-select cg-input" v-model="classForm.majorName">
+                                <option value="">请选择专业</option>
+                                <option v-for="major in filteredManageMajors()" :key="major.id" :value="major.name">{{ major.name }}</option>
+                            </select>
+                        </label>
+                        <label>班级名称<input class="form-control cg-input" v-model="classForm.name"></label>
+                        <label>状态
+                            <select class="form-select cg-input" v-model.number="classForm.status">
+                                <option :value="1">启用</option>
+                                <option :value="0">停用</option>
+                            </select>
+                        </label>
+                        <button class="btn btn-primary-wide" type="submit">{{ classForm.id ? '保存修改' : '新增班级' }}</button>
+                        <button class="btn btn-ghost-wide" type="button" @click="resetClassForm">清空</button>
+                    </form>
+                </div>
+                <div class="list-card">
+                    <h2>班级列表</h2>
+                    <table class="table cg-table">
+                        <thead><tr><th>学院 / 专业 / 班级</th><th>状态</th><th>操作</th></tr></thead>
+                        <tbody>
+                        <tr v-if="manageClasses.length === 0">
+                            <td colspan="3">
+                                <div class="empty-state table-empty">
+                                    <i data-lucide="users"></i>
+                                    暂无班级数据
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-for="item in manageClasses" :key="item.id">
+                            <td>{{ item.name }}<span class="muted-line">{{ item.collegeName }} · {{ item.majorName }}</span></td>
+                            <td><span class="state-badge" :class="item.status === 1 ? 'ok' : 'muted'">{{ item.status === 1 ? '启用' : '停用' }}</span></td>
+                            <td><button class="btn btn-mini" @click="editClassGroup(item)">编辑</button></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div v-if="adminTab === 'dorms'" class="module-layout">
+                <div class="form-card">
+                    <h2>{{ dormBuildingForm.id ? '编辑楼栋' : '新增楼栋' }}</h2>
+                    <form @submit.prevent="saveDormBuilding" class="form-stack">
+                        <label>楼栋名称<input class="form-control cg-input" v-model="dormBuildingForm.name"></label>
+                        <label>状态
+                            <select class="form-select cg-input" v-model.number="dormBuildingForm.status">
+                                <option :value="1">启用</option>
+                                <option :value="0">停用</option>
+                            </select>
+                        </label>
+                        <button class="btn btn-primary-wide" type="submit">{{ dormBuildingForm.id ? '保存修改' : '新增楼栋' }}</button>
+                        <button class="btn btn-ghost-wide" type="button" @click="resetDormBuildingForm">清空</button>
+                    </form>
+                </div>
+                <div class="list-card">
+                    <h2>楼栋列表</h2>
+                    <table class="table cg-table">
+                        <thead><tr><th>楼栋</th><th>状态</th><th>操作</th></tr></thead>
+                        <tbody>
+                        <tr v-if="manageDormBuildings.length === 0">
+                            <td colspan="3">
+                                <div class="empty-state table-empty">
+                                    <i data-lucide="building"></i>
+                                    暂无楼栋数据
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-for="item in manageDormBuildings" :key="item.id">
+                            <td>{{ item.name }}</td>
+                            <td><span class="state-badge" :class="item.status === 1 ? 'ok' : 'muted'">{{ item.status === 1 ? '启用' : '停用' }}</span></td>
+                            <td><button class="btn btn-mini" @click="editDormBuilding(item)">编辑</button></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div v-if="adminTab === 'dorms'" class="module-layout admin-secondary-layout">
+                <div class="form-card">
+                    <h2>{{ dormRoomForm.id ? '编辑宿舍号' : '新增宿舍号' }}</h2>
+                    <form @submit.prevent="saveDormRoom" class="form-stack">
+                        <label>所属楼栋
+                            <select class="form-select cg-input" v-model="dormRoomForm.buildingName">
+                                <option value="">请选择楼栋</option>
+                                <option v-for="building in manageDormBuildings" :key="building.id" :value="building.name">{{ building.name }}</option>
+                            </select>
+                        </label>
+                        <label>宿舍号<input class="form-control cg-input" v-model="dormRoomForm.roomNo"></label>
+                        <label>状态
+                            <select class="form-select cg-input" v-model.number="dormRoomForm.status">
+                                <option :value="1">启用</option>
+                                <option :value="0">停用</option>
+                            </select>
+                        </label>
+                        <button class="btn btn-primary-wide" type="submit">{{ dormRoomForm.id ? '保存修改' : '新增宿舍号' }}</button>
+                        <button class="btn btn-ghost-wide" type="button" @click="resetDormRoomForm">清空</button>
+                    </form>
+                </div>
+                <div class="list-card">
+                    <h2>宿舍号列表</h2>
+                    <table class="table cg-table">
+                        <thead><tr><th>楼栋 / 宿舍号</th><th>状态</th><th>操作</th></tr></thead>
+                        <tbody>
+                        <tr v-if="manageDormRooms.length === 0">
+                            <td colspan="3">
+                                <div class="empty-state table-empty">
+                                    <i data-lucide="door-open"></i>
+                                    暂无宿舍号数据
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-for="item in manageDormRooms" :key="item.id">
+                            <td>{{ item.roomNo }}<span class="muted-line">{{ item.buildingName }}</span></td>
+                            <td><span class="state-badge" :class="item.status === 1 ? 'ok' : 'muted'">{{ item.status === 1 ? '启用' : '停用' }}</span></td>
+                            <td><button class="btn btn-mini" @click="editDormRoom(item)">编辑</button></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div v-if="adminTab === 'repairs'" class="list-card wide">
+                <div class="list-head">
+                    <h2>报修审核</h2>
+                    <div class="search-inline">
+                        <input class="form-control cg-input" v-model="auditRepairQuery.studentName" placeholder="学生姓名">
+                        <input class="form-control cg-input" v-model="auditRepairQuery.dormBuilding" placeholder="楼栋">
+                        <select class="form-select cg-select" v-model="auditRepairQuery.status">
+                            <option value="">全部</option>
+                            <option value="PENDING">待审核</option>
+                            <option value="APPROVED">通过</option>
+                            <option value="REJECTED">不通过</option>
+                            <option value="CANCELED">已撤销</option>
+                            <option value="REPAIRING">维修中</option>
+                            <option value="COMPLETED">已完成</option>
+                            <option value="RATED">已评价</option>
+                        </select>
+                        <button class="btn btn-icon" @click="loadAuditRepairs" title="查询"><i data-lucide="search"></i></button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table cg-table">
+                        <thead><tr><th>学生</th><th>事由</th><th>宿舍</th><th>状态</th><th>维修工</th><th>评价</th><th>操作</th></tr></thead>
+                        <tbody>
+                        <tr v-if="auditRepairs.list.length === 0">
+                            <td colspan="7">
+                                <div class="empty-state table-empty">
+                                    <i data-lucide="wrench"></i>
+                                    暂无报修审核数据
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-for="item in auditRepairs.list" :key="item.id">
+                            <td>{{ item.studentName }}<span class="muted-line">{{ item.studentNo }}</span></td>
+                            <td>{{ item.reason }}</td>
+                            <td>{{ item.dormBuilding || '-' }} {{ item.dormRoom || '' }}</td>
+                            <td><span class="state-badge" :class="stateClass(item.status)">{{ repairStatusText(item.status) }}</span></td>
+                            <td>{{ item.repairmanPhone || '-' }}</td>
+                            <td>{{ repairReviewText(item) }}</td>
+                            <td class="table-actions">
+                                <button class="btn btn-mini" v-if="item.status === 'PENDING'" @click="auditRepair(item, 'APPROVED')">通过</button>
+                                <button class="btn btn-mini secondary" v-if="item.status === 'PENDING'" @click="auditRepair(item, 'REJECTED')">不通过</button>
+                                <button class="btn btn-mini" v-if="item.status === 'APPROVED'" @click="updateRepairStatus(item.id, 'REPAIRING')">维修中</button>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pager" v-if="hasPages(auditRepairs, auditRepairQuery)">
+                    <button class="btn btn-mini secondary" :disabled="auditRepairQuery.page <= 1" @click="changePage('auditRepairs', -1)">上一页</button>
+                    <span>{{ pageText(auditRepairs, auditRepairQuery) }}</span>
+                    <button class="btn btn-mini secondary" :disabled="auditRepairQuery.page >= totalPages(auditRepairs, auditRepairQuery)" @click="changePage('auditRepairs', 1)">下一页</button>
+                </div>
+            </div>
+        </section>
+
+        <section v-if="view === 'profile'" class="container-xl workspace narrow">
+            <div class="workspace-heading">
+                <div>
+                    <h1>个人中心</h1>
+                </div>
+            </div>
+            <div class="form-card profile-card">
+                <form @submit.prevent="updateProfile" class="form-stack">
+                    <div class="grid-2">
+                        <label>姓名<input class="form-control cg-input" v-model="profileForm.realName"></label>
+                        <label>手机<input class="form-control cg-input" v-model="profileForm.phone"></label>
+                        <label>邮箱<input class="form-control cg-input" v-model="profileForm.email"></label>
+                        <label v-if="currentUser && currentUser.role !== roles.ADMIN">学院
+                            <select class="form-select cg-input" v-model="profileForm.college" @change="onProfileCollegeChange">
+                                <option v-for="college in colleges" :key="college.id" :value="college.name">{{ college.name }}</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div v-if="currentUser && currentUser.role === roles.STUDENT" class="grid-2">
+                        <label>专业
+                            <select class="form-select cg-input" v-model="profileForm.major" @change="onProfileMajorChange">
+                                <option value="">请选择专业</option>
+                                <option v-for="major in profileMajors" :key="major.id" :value="major.name">{{ major.name }}</option>
+                            </select>
+                        </label>
+                        <label>班级
+                            <select class="form-select cg-input" v-model="profileForm.className">
+                                <option value="">请选择班级</option>
+                                <option v-for="item in profileClasses" :key="item.id" :value="item.name">{{ item.name }}</option>
+                            </select>
+                        </label>
+                        <label>公寓楼栋
+                            <select class="form-select cg-input" v-model="profileForm.dormBuilding" @change="onProfileDormBuildingChange">
+                                <option value="">请选择楼栋</option>
+                                <option v-for="building in dormBuildings" :key="building.id" :value="building.name">{{ building.name }}</option>
+                            </select>
+                        </label>
+                        <label>宿舍号
+                            <select class="form-select cg-input" v-model="profileForm.dormRoom">
+                                <option value="">请选择宿舍号</option>
+                                <option v-for="room in profileDormRooms" :key="room.id" :value="room.roomNo">{{ room.roomNo }}</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div v-if="currentUser && currentUser.role === roles.TEACHER" class="grid-2">
+                        <label>职称<input class="form-control cg-input" v-model="profileForm.title"></label>
+                        <label>办公室<input class="form-control cg-input" v-model="profileForm.office"></label>
+                    </div>
+                    <div v-if="currentUser && currentUser.role === roles.ADMIN" class="grid-2">
+                        <label>管理部门<input class="form-control cg-input" v-model="profileForm.department"></label>
+                    </div>
+                    <button class="btn btn-primary-wide" type="submit">保存资料</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <div class="toast-layer" v-if="toast.message">
+        <div class="cg-toast" :class="toast.type">{{ toast.message }}</div>
+    </div>
+
+    <div class="modal fade" id="announcementModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content cg-modal">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ selectedAnnouncement.title }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="modal-meta">{{ selectedAnnouncement.publisherName }} · {{ formatDate(selectedAnnouncement.createdAt) }}</p>
+                    <p>{{ selectedAnnouncement.content }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="rateModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content cg-modal">
+                <div class="modal-header">
+                    <h5 class="modal-title">报修评价</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form @submit.prevent="submitRate">
+                    <div class="modal-body form-stack">
+                        <label>评分
+                            <select class="form-select cg-input" v-model.number="rateForm.score">
+                                <option :value="5">5 分</option>
+                                <option :value="4">4 分</option>
+                                <option :value="3">3 分</option>
+                                <option :value="2">2 分</option>
+                                <option :value="1">1 分</option>
+                            </select>
+                        </label>
+                        <label>评价<textarea class="form-control cg-input" rows="4" v-model="rateForm.comment"></textarea></label>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary-soft" type="submit">提交评价</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="repairAuditModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content cg-modal">
+                <div class="modal-header">
+                    <h5 class="modal-title">通过报修申请</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form @submit.prevent="submitRepairApproval">
+                    <div class="modal-body form-stack">
+                        <p class="modal-meta">请填写维修工手机号，学生将在报修列表中看到该号码。</p>
+                        <label>维修工手机号
+                            <input class="form-control cg-input" v-model="repairAuditForm.repairmanPhone" placeholder="例如 13800000000">
+                        </label>
+                        <label>审核意见
+                            <textarea class="form-control cg-input" rows="3" v-model="repairAuditForm.auditOpinion"></textarea>
+                        </label>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary-soft" type="submit">确认通过</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="confirmationModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content cg-modal">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ confirmation.title }}</h5>
+                    <button type="button" class="btn-close" @click="closeConfirmation(false)"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="confirm-copy">{{ confirmation.message }}</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-ghost" type="button" @click="closeConfirmation(false)">取消</button>
+                    <button class="btn" :class="confirmation.danger ? 'btn-danger-soft' : 'btn-primary-soft'" type="button" @click="closeConfirmation(true)">
+                        {{ confirmation.confirmText }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="/js/api.js"></script>
+<script src="/js/app.js?v=20260607-navbar"></script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zane.mapper.UserMapper">
+
+    <select id="findById" resultType="User">
+        SELECT id, username, password, role, real_name, phone, email, college, status, created_at, updated_at
+        FROM users
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByUsername" resultType="User">
+        SELECT id, username, password, role, real_name, phone, email, college, status, created_at, updated_at
+        FROM users
+        WHERE username = #{username}
+    </select>
+
+    <insert id="insert" parameterType="User" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO users (username, password, role, real_name, phone, email, college, status)
+        VALUES (#{username}, #{password}, #{role}, #{realName}, #{phone}, #{email}, #{college}, #{status})
+    </insert>
+
+    <update id="updateProfile" parameterType="User">
+        UPDATE users
+        SET real_name = #{realName},
+            phone = #{phone},
+            email = #{email},
+            college = #{college}
+        WHERE id = #{id}
+    </update>
+
+    <update id="updatePassword">
+        UPDATE users
+        SET password = #{password}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

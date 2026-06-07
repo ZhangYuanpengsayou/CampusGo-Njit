@@ -1,0 +1,19 @@
+package com.zane.vo;
+
+import lombok.Data;
+
+import java.time.LocalDateTime;
+
+@Data
+public class ClassGroupVO {
+
+    private Long id;
+    private Long collegeId;
+    private String collegeName;
+    private Long majorId;
+    private String majorName;
+    private String name;
+    private Integer status;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zane.mapper.TeacherProfileMapper">
+
+    <select id="findByUserId" resultType="TeacherProfile">
+        SELECT id, user_id, teacher_no, title, office
+        FROM teacher_profiles
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="countByTeacherNo" resultType="int">
+        SELECT COUNT(*)
+        FROM teacher_profiles
+        WHERE teacher_no = #{teacherNo}
+    </select>
+
+    <insert id="insert" parameterType="TeacherProfile">
+        INSERT INTO teacher_profiles (user_id, teacher_no, title, office)
+        VALUES (#{userId}, #{teacherNo}, #{title}, #{office})
+    </insert>
+
+    <update id="updateByUserId" parameterType="TeacherProfile">
+        UPDATE teacher_profiles
+        SET title = #{title},
+            office = #{office}
+        WHERE user_id = #{userId}
+    </update>
+
+</mapper>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zane.mapper.AdminProfileMapper">
+
+    <select id="findByUserId" resultType="AdminProfile">
+        SELECT id, user_id, admin_no, department
+        FROM admin_profiles
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="countByAdminNo" resultType="int">
+        SELECT COUNT(*)
+        FROM admin_profiles
+        WHERE admin_no = #{adminNo}
+    </select>
+
+    <insert id="insert" parameterType="AdminProfile">
+        INSERT INTO admin_profiles (user_id, admin_no, department)
+        VALUES (#{userId}, #{adminNo}, #{department})
+    </insert>
+
+    <update id="updateByUserId" parameterType="AdminProfile">
+        UPDATE admin_profiles
+        SET department = #{department}
+        WHERE user_id = #{userId}
+    </update>
+
+</mapper>

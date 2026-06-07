@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: CampusGo
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/db-campusgo-njit
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: 1234
+
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.zane.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+campusgo:
+  register:
+    teacher-application-code: TEACHER2026
+    admin-application-code: ADMIN2026

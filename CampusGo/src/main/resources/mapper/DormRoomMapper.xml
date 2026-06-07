@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zane.mapper.DormRoomMapper">
+
+    <select id="findById" resultType="DormRoom">
+        SELECT r.id, r.building_id, b.name AS building_name, r.room_no, r.status, r.created_at, r.updated_at
+        FROM dorm_rooms r
+        JOIN dorm_buildings b ON r.building_id = b.id
+        WHERE r.id = #{id}
+    </select>
+
+    <select id="findByBuildingAndRoomNo" resultType="DormRoom">
+        SELECT r.id, r.building_id, b.name AS building_name, r.room_no, r.status, r.created_at, r.updated_at
+        FROM dorm_rooms r
+        JOIN dorm_buildings b ON r.building_id = b.id
+        WHERE b.name = #{buildingName}
+          AND r.room_no = #{roomNo}
+    </select>
+
+    <select id="findEnabledByBuilding" resultType="DormRoom">
+        SELECT r.id, r.building_id, b.name AS building_name, r.room_no, r.status, r.created_at, r.updated_at
+        FROM dorm_rooms r
+        JOIN dorm_buildings b ON r.building_id = b.id
+        WHERE b.name = #{buildingName}
+          AND b.status = 1
+          AND r.status = 1
+        ORDER BY r.id ASC
+    </select>
+
+    <select id="findAll" resultType="DormRoom">
+        SELECT r.id, r.building_id, b.name AS building_name, r.room_no, r.status, r.created_at, r.updated_at
+        FROM dorm_rooms r
+        JOIN dorm_buildings b ON r.building_id = b.id
+        ORDER BY b.id ASC, r.status DESC, r.id ASC
+    </select>
+
+    <insert id="insert" parameterType="DormRoom" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO dorm_rooms (building_id, room_no, status)
+        VALUES (#{buildingId}, #{roomNo}, #{status})
+    </insert>
+
+    <update id="update" parameterType="DormRoom">
+        UPDATE dorm_rooms
+        SET building_id = #{buildingId},
+            room_no = #{roomNo},
+            status = #{status}
+        WHERE id = #{id}
+    </update>
+</mapper>
