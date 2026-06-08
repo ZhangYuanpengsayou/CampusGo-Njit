@@ -8,6 +8,7 @@ import com.zane.dto.DormRoomDTO;
 import com.zane.service.DormitoryStructureService;
 import com.zane.vo.DormBuildingVO;
 import com.zane.vo.DormRoomVO;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -52,6 +53,13 @@ public class DormitoryStructureController {
         return Result.success("修改成功", dormitoryStructureService.updateBuilding(id, dormBuildingDTO));
     }
 
+    @DeleteMapping("/dorm-buildings/{id}")
+    @RequireRole(RoleConstants.ADMIN)
+    public Result<Void> deleteBuilding(@PathVariable Long id) {
+        dormitoryStructureService.deleteBuilding(id);
+        return Result.success("删除成功", null);
+    }
+
     @GetMapping("/dorm-rooms")
     public Result<List<DormRoomVO>> listEnabledRooms(@RequestParam String building) {
         return Result.success(dormitoryStructureService.listEnabledRooms(building));
@@ -73,5 +81,12 @@ public class DormitoryStructureController {
     @RequireRole(RoleConstants.ADMIN)
     public Result<DormRoomVO> updateRoom(@PathVariable Long id, @RequestBody DormRoomDTO dormRoomDTO) {
         return Result.success("修改成功", dormitoryStructureService.updateRoom(id, dormRoomDTO));
+    }
+
+    @DeleteMapping("/dorm-rooms/{id}")
+    @RequireRole(RoleConstants.ADMIN)
+    public Result<Void> deleteRoom(@PathVariable Long id) {
+        dormitoryStructureService.deleteRoom(id);
+        return Result.success("删除成功", null);
     }
 }

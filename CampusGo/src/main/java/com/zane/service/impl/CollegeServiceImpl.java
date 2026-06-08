@@ -3,7 +3,9 @@ package com.zane.service.impl;
 import com.zane.dto.CollegeDTO;
 import com.zane.entity.College;
 import com.zane.exception.BusinessException;
+import com.zane.mapper.ClassGroupMapper;
 import com.zane.mapper.CollegeMapper;
+import com.zane.mapper.MajorMapper;
 import com.zane.service.CollegeService;
 import com.zane.vo.CollegeVO;
 import org.springframework.stereotype.Service;
@@ -16,9 +18,13 @@ import java.util.List;
 public class CollegeServiceImpl implements CollegeService {
 
     private final CollegeMapper collegeMapper;
+    private final MajorMapper majorMapper;
+    private final ClassGroupMapper classGroupMapper;
 
-    public CollegeServiceImpl(CollegeMapper collegeMapper) {
+    public CollegeServiceImpl(CollegeMapper collegeMapper, MajorMapper majorMapper, ClassGroupMapper classGroupMapper) {
         this.collegeMapper = collegeMapper;
+        this.majorMapper = majorMapper;
+        this.classGroupMapper = classGroupMapper;
     }
 
     @Override
@@ -53,6 +59,15 @@ public class CollegeServiceImpl implements CollegeService {
         existing.setStatus(collegeDTO.getStatus() == null ? existing.getStatus() : collegeDTO.getStatus());
         collegeMapper.update(existing);
         return toVO(collegeMapper.findById(id));
+    }
+
+    @Override
+    @Transactional
+    public void deleteCollege(Long id) {
+        getExistingCollege(id);
+        classGroupMapper.deleteByCollegeId(id);
+        majorMapper.deleteByCollegeId(id);
+        collegeMapper.delete(id);
     }
 
     @Override

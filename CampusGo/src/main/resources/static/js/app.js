@@ -48,6 +48,8 @@ createApp({
             manageDormRooms: [],
             carousels: [],
             manageCarousels: [],
+            activeHeroIndex: 0,
+            heroAutoplayTimer: null,
             announcements: { total: 0, list: [] },
             leaves: { total: 0, list: [] },
             auditLeaves: { total: 0, list: [] },
@@ -60,6 +62,10 @@ createApp({
             repairAuditModal: null,
             confirmationModal: null,
             confirmation: { title: "确认操作", message: "", confirmText: "确认", danger: false, resolve: null },
+            homeIntroPlayed: false,
+            contentAnimationTimer: null,
+            contentScrollTriggers: [],
+            scrollTriggerRegistered: false,
             studentTab: "leave",
             adminTab: "announcements",
             loginForm: { username: "", password: "" },
@@ -99,9 +105,13 @@ createApp({
         });
         await Promise.all([this.loadCarousels(), this.loadAnnouncements(), this.loadColleges(), this.loadDormBuildings(), this.loadMe()]);
         this.refreshIcons();
+        this.initHeroCarousel();
+        this.animateHomeIntro();
+        this.queueContentAnimation();
     },
     updated() {
         this.refreshIcons();
+        this.queueContentAnimation();
     },
     methods: {
         async apiCall(action, successMessage) {
@@ -208,6 +218,11 @@ createApp({
         },
         async loadCarousels() {
             this.carousels = await this.apiCall(() => CampusGoApi.get("/api/carousels")) || [];
+            if (this.activeHeroIndex >= this.heroSlides().length) {
+                this.activeHeroIndex = 0;
+            }
+            await this.$nextTick();
+            this.initHeroCarousel();
         },
         async loadManageCarousels() {
             this.manageCarousels = await this.apiCall(() => CampusGoApi.get("/api/carousels/manage")) || [];
@@ -215,6 +230,7 @@ createApp({
         async loadAnnouncements() {
             const query = this.queryString(this.announcementQuery);
             this.announcements = await this.apiCall(() => CampusGoApi.get(`/api/announcements${query}`)) || { total: 0, list: [] };
+            this.queueContentAnimation();
         },
         async login() {
             const user = await this.apiCall(() => CampusGoApi.post("/api/auth/login", this.loginForm), "登录成功");
@@ -257,6 +273,7 @@ createApp({
         },
         showAuth(mode) {
             this.closeMainNav();
+            this.stopHeroAutoplay();
             this.authMode = mode;
             this.view = "auth";
         },
@@ -265,6 +282,8 @@ createApp({
             this.view = "home";
             this.loadCarousels();
             this.loadAnnouncements();
+            this.$nextTick(() => this.initHeroCarousel());
+            this.animateHomeIntro(true);
         },
         closeMainNav() {
             const nav = document.getElementById("mainNav");
@@ -285,6 +304,7 @@ createApp({
         },
         async showStudent() {
             this.closeMainNav();
+            this.stopHeroAutoplay();
             this.view = "student";
             this.studentTab = "leave";
             await this.loadMyLeaves();
@@ -292,17 +312,20 @@ createApp({
         },
         async showTeacher() {
             this.closeMainNav();
+            this.stopHeroAutoplay();
             this.view = "teacher";
             await this.loadAuditLeaves();
         },
         async showAdmin() {
             this.closeMainNav();
+            this.stopHeroAutoplay();
             this.view = "admin";
             this.adminTab = "announcements";
             await this.loadAnnouncements();
         },
         async showProfile() {
             this.closeMainNav();
+            this.stopHeroAutoplay();
             this.view = "profile";
             await this.loadMe();
             await this.loadProfileOptions();
@@ -585,6 +608,24 @@ createApp({
             await this.loadManageColleges();
             await this.loadColleges();
         },
+        async deleteCollege(id) {
+            const confirmed = await this.confirmAction("删除学院会同时删除该学院下的专业和班级，确认继续吗？", {
+                title: "删除学院",
+                confirmText: "删除",
+                danger: true
+            });
+            if (!confirmed) return;
+            await this.apiCall(() => CampusGoApi.delete(`/api/colleges/${id}`), "学院已删除");
+            if (this.collegeForm.id === id) {
+                this.resetCollegeForm();
+            }
+            this.resetMajorForm();
+            this.resetClassForm();
+            await this.loadManageColleges();
+            await this.loadColleges();
+            await this.loadManageMajors();
+            await this.loadManageClasses();
+        },
         editMajor(item) {
             this.majorForm = { id: item.id, collegeName: item.collegeName, name: item.name, status: item.status };
         },
@@ -602,6 +643,21 @@ createApp({
             await this.loadManageMajors();
             await this.loadManageClasses();
         },
+        async deleteMajor(id) {
+            const confirmed = await this.confirmAction("删除专业会同时删除该专业下的班级，确认继续吗？", {
+                title: "删除专业",
+                confirmText: "删除",
+                danger: true
+            });
+            if (!confirmed) return;
+            await this.apiCall(() => CampusGoApi.delete(`/api/majors/${id}`), "专业已删除");
+            if (this.majorForm.id === id) {
+                this.resetMajorForm();
+            }
+            this.resetClassForm();
+            await this.loadManageMajors();
+            await this.loadManageClasses();
+        },
         editClassGroup(item) {
             this.classForm = { id: item.id, collegeName: item.collegeName, majorName: item.majorName, name: item.name, status: item.status };
         },
@@ -616,6 +672,19 @@ createApp({
                 await this.apiCall(() => CampusGoApi.post("/api/classes", payload), "班级已新增");
             }
             this.resetClassForm();
+            await this.loadManageClasses();
+        },
+        async deleteClassGroup(id) {
+            const confirmed = await this.confirmAction("确认删除这个班级吗？", {
+                title: "删除班级",
+                confirmText: "删除",
+                danger: true
+            });
+            if (!confirmed) return;
+            await this.apiCall(() => CampusGoApi.delete(`/api/classes/${id}`), "班级已删除");
+            if (this.classForm.id === id) {
+                this.resetClassForm();
+            }
             await this.loadManageClasses();
         },
         editDormBuilding(item) {
@@ -636,6 +705,22 @@ createApp({
             await this.loadManageDormRooms();
             await this.loadDormBuildings();
         },
+        async deleteDormBuilding(id) {
+            const confirmed = await this.confirmAction("删除楼栋会同时删除该楼栋下的宿舍号，确认继续吗？", {
+                title: "删除楼栋",
+                confirmText: "删除",
+                danger: true
+            });
+            if (!confirmed) return;
+            await this.apiCall(() => CampusGoApi.delete(`/api/dorm-buildings/${id}`), "楼栋已删除");
+            if (this.dormBuildingForm.id === id) {
+                this.resetDormBuildingForm();
+            }
+            this.resetDormRoomForm();
+            await this.loadManageDormBuildings();
+            await this.loadManageDormRooms();
+            await this.loadDormBuildings();
+        },
         editDormRoom(item) {
             this.dormRoomForm = { id: item.id, buildingName: item.buildingName, roomNo: item.roomNo, status: item.status };
         },
@@ -650,6 +735,19 @@ createApp({
                 await this.apiCall(() => CampusGoApi.post("/api/dorm-rooms", payload), "宿舍号已新增");
             }
             this.resetDormRoomForm();
+            await this.loadManageDormRooms();
+        },
+        async deleteDormRoom(id) {
+            const confirmed = await this.confirmAction("确认删除这个宿舍号吗？", {
+                title: "删除宿舍号",
+                confirmText: "删除",
+                danger: true
+            });
+            if (!confirmed) return;
+            await this.apiCall(() => CampusGoApi.delete(`/api/dorm-rooms/${id}`), "宿舍号已删除");
+            if (this.dormRoomForm.id === id) {
+                this.resetDormRoomForm();
+            }
             await this.loadManageDormRooms();
         },
         openAnnouncement(item) {
@@ -688,6 +786,69 @@ createApp({
                 subtitle: "公告查看、请假申请、公寓报修和事务审核集中处理，让日常校园服务更清晰、更轻快。",
                 imageUrl: "/assets/campus-hero.png"
             }];
+        },
+        njitTiles() {
+            const rows = [
+                "X...X.XXXX.XXX.XXXXX",
+                "XX..X....X..X....X..",
+                "X.X.X....X..X....X..",
+                "X..XX.X..X..X....X..",
+                "X...X.XXXX.XXX...X.."
+            ];
+            return rows.flatMap((line, rowIndex) => [...line]
+                .map((value, colIndex) => value === "X" ? {
+                    row: rowIndex + 1,
+                    col: colIndex + 1,
+                    light: (rowIndex + colIndex) % 2 === 0
+                } : null)
+                .filter(Boolean));
+        },
+        initHeroCarousel() {
+            this.startHeroAutoplay();
+        },
+        startHeroAutoplay() {
+            window.clearInterval(this.heroAutoplayTimer);
+            if (this.view !== "home" || this.heroSlides().length <= 1) {
+                return;
+            }
+            this.heroAutoplayTimer = window.setInterval(() => {
+                this.nextHeroSlide(false);
+            }, 5200);
+        },
+        stopHeroAutoplay() {
+            window.clearInterval(this.heroAutoplayTimer);
+            this.heroAutoplayTimer = null;
+        },
+        restartHeroAutoplay() {
+            this.startHeroAutoplay();
+        },
+        goToHeroSlide(index, resetAutoplay = true) {
+            const total = this.heroSlides().length;
+            if (total === 0) {
+                return;
+            }
+            this.activeHeroIndex = Math.min(Math.max(index, 0), total - 1);
+            if (resetAutoplay) {
+                this.restartHeroAutoplay();
+            }
+        },
+        nextHeroSlide(resetAutoplay = true) {
+            const total = this.heroSlides().length;
+            if (total <= 1) {
+                return;
+            }
+            this.activeHeroIndex = (this.activeHeroIndex + 1) % total;
+            if (resetAutoplay) {
+                this.restartHeroAutoplay();
+            }
+        },
+        previousHeroSlide() {
+            const total = this.heroSlides().length;
+            if (total <= 1) {
+                return;
+            }
+            this.activeHeroIndex = (this.activeHeroIndex - 1 + total) % total;
+            this.restartHeroAutoplay();
         },
         stateClass(status) {
             if (["PENDING", "REPAIRING"].includes(status)) return "pending";
@@ -762,6 +923,150 @@ createApp({
             if (window.lucide) {
                 window.lucide.createIcons();
             }
+        },
+        registerScrollTrigger() {
+            if (this.scrollTriggerRegistered || !window.gsap || !window.ScrollTrigger) {
+                return;
+            }
+            gsap.registerPlugin(ScrollTrigger);
+            this.scrollTriggerRegistered = true;
+        },
+        queueContentAnimation() {
+            window.clearTimeout(this.contentAnimationTimer);
+            this.contentAnimationTimer = window.setTimeout(() => this.animateContentSections(), 80);
+        },
+        cleanupContentAnimations() {
+            this.contentScrollTriggers = this.contentScrollTriggers.filter((trigger) => {
+                if (!trigger.trigger || document.body.contains(trigger.trigger)) {
+                    return true;
+                }
+                trigger.kill();
+                return false;
+            });
+        },
+        animateContentSections() {
+            if (!window.gsap) {
+                return;
+            }
+
+            const selectors = [
+                ".home-page .section-heading",
+                ".home-page .notice-card",
+                ".home-page .empty-state",
+                ".auth-page .auth-copy",
+                ".auth-page .auth-form",
+                ".workspace-heading",
+                ".module-tabs",
+                ".form-card",
+                ".list-card",
+                ".profile-card"
+            ].join(", ");
+            const elements = gsap.utils.toArray(selectors)
+                .filter((element) => element.offsetParent !== null && !element.dataset.cgAnimated);
+
+            if (elements.length === 0) {
+                this.cleanupContentAnimations();
+                return;
+            }
+
+            const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            if (reduceMotion || !window.ScrollTrigger) {
+                gsap.set(elements, { clearProps: "all", autoAlpha: 1 });
+                elements.forEach((element) => {
+                    element.dataset.cgAnimated = "true";
+                });
+                return;
+            }
+
+            this.registerScrollTrigger();
+            this.cleanupContentAnimations();
+
+            elements.forEach((element, index) => {
+                element.dataset.cgAnimated = "true";
+                const tween = gsap.fromTo(element, {
+                    y: 18,
+                    autoAlpha: 0,
+                    scale: 0.985
+                }, {
+                    y: 0,
+                    autoAlpha: 1,
+                    scale: 1,
+                    duration: 0.52,
+                    ease: "power2.out",
+                    delay: Math.min(index * 0.035, 0.18),
+                    overwrite: "auto",
+                    scrollTrigger: {
+                        trigger: element,
+                        start: "top 88%",
+                        once: true
+                    }
+                });
+                if (tween.scrollTrigger) {
+                    this.contentScrollTriggers.push(tween.scrollTrigger);
+                }
+            });
+            ScrollTrigger.refresh();
+        },
+        async animateHomeIntro(replay = false) {
+            if (this.view !== "home" || (!replay && this.homeIntroPlayed)) {
+                return;
+            }
+            await this.$nextTick();
+            const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            if (!window.gsap) {
+                this.homeIntroPlayed = true;
+                return;
+            }
+            const grid = document.querySelector(".hero-flip-grid");
+            const tiles = gsap.utils.toArray(".hero-flip-grid .flip-tile");
+            const activeSlide = document.querySelector(".hero-carousel .carousel-item.active");
+            const contentItems = activeSlide ? activeSlide.querySelectorAll(".eyebrow, h1, .hero-copy, .hero-actions .btn") : [];
+
+            if (reduceMotion || tiles.length === 0 || !activeSlide) {
+                gsap.set([".hero-flip-grid", ".hero-flip-grid .flip-tile", contentItems], { clearProps: "all", autoAlpha: 1 });
+                this.homeIntroPlayed = true;
+                return;
+            }
+
+            this.homeIntroPlayed = true;
+            gsap.killTweensOf([grid, tiles, contentItems]);
+            gsap.set(grid, { x: 0, autoAlpha: 1 });
+            gsap.set(tiles, {
+                autoAlpha: 0,
+                rotationY: -115,
+                rotationX: 16,
+                scale: 0.84,
+                transformPerspective: 760
+            });
+            gsap.set(contentItems, { y: 18, autoAlpha: 0 });
+
+            gsap.timeline({ defaults: { ease: "power3.out" } })
+                .to(tiles, {
+                    autoAlpha: 1,
+                    rotationY: 0,
+                    rotationX: 0,
+                    scale: 1,
+                    duration: 0.68,
+                    stagger: { each: 0.026, from: "random" }
+                })
+                .to(contentItems, {
+                    y: 0,
+                    autoAlpha: 1,
+                    duration: 0.56,
+                    stagger: 0.07
+                }, 0.22)
+                .to(tiles, {
+                    rotationY: 180,
+                    duration: 0.5,
+                    stagger: { each: 0.02, from: "end" }
+                }, "+=0.55")
+                .to(grid, {
+                    x: "-115vw",
+                    autoAlpha: 0,
+                    duration: 1.05,
+                    ease: "power3.in"
+                }, "-=0.05")
+                .set(grid, { clearProps: "transform" });
         }
     }
 }).mount("#app");

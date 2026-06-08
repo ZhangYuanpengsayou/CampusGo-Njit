@@ -39,4 +39,9 @@
             status = #{status}
         WHERE id = #{id}
     </update>
+
+    <delete id="delete">
+        DELETE FROM dorm_buildings
+        WHERE id = #{id}
+    </delete>
 </mapper>

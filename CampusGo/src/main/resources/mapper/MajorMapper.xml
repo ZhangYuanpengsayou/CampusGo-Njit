@@ -47,4 +47,14 @@
             status = #{status}
         WHERE id = #{id}
     </update>
+
+    <delete id="delete">
+        DELETE FROM majors
+        WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteByCollegeId">
+        DELETE FROM majors
+        WHERE college_id = #{collegeId}
+    </delete>
 </mapper>

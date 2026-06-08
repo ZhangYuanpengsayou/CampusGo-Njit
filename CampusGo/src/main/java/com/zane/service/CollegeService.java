@@ -15,5 +15,7 @@ public interface CollegeService {
 
     CollegeVO updateCollege(Long id, CollegeDTO collegeDTO);
 
+    void deleteCollege(Long id);
+
     void requireEnabledCollege(String collegeName);
 }

@@ -62,6 +62,14 @@ public class DormitoryStructureServiceImpl implements DormitoryStructureService 
     }
 
     @Override
+    @Transactional
+    public void deleteBuilding(Long id) {
+        getExistingBuilding(id);
+        dormRoomMapper.deleteByBuildingId(id);
+        dormBuildingMapper.delete(id);
+    }
+
+    @Override
     public List<DormRoomVO> listEnabledRooms(String buildingName) {
         requireEnabledBuilding(buildingName);
         return dormRoomMapper.findEnabledByBuilding(buildingName.trim()).stream().map(this::toRoomVO).toList();
@@ -92,6 +100,13 @@ public class DormitoryStructureServiceImpl implements DormitoryStructureService 
         fillRoom(room, dormRoomDTO);
         dormRoomMapper.update(room);
         return toRoomVO(dormRoomMapper.findById(id));
+    }
+
+    @Override
+    @Transactional
+    public void deleteRoom(Long id) {
+        getExistingRoom(id);
+        dormRoomMapper.delete(id);
     }
 
     @Override

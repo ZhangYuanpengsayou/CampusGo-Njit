@@ -17,6 +17,8 @@ public interface AcademicStructureService {
 
     MajorVO updateMajor(Long id, MajorDTO majorDTO);
 
+    void deleteMajor(Long id);
+
     List<ClassGroupVO> listEnabledClasses(String collegeName, String majorName);
 
     List<ClassGroupVO> listAllClasses();
@@ -24,6 +26,8 @@ public interface AcademicStructureService {
     ClassGroupVO createClassGroup(ClassGroupDTO classGroupDTO);
 
     ClassGroupVO updateClassGroup(Long id, ClassGroupDTO classGroupDTO);
+
+    void deleteClassGroup(Long id);
 
     void requireEnabledMajor(String collegeName, String majorName);
 

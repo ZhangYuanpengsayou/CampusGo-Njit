@@ -18,4 +18,10 @@ public interface ClassGroupMapper {
     int insert(ClassGroup classGroup);
 
     int update(ClassGroup classGroup);
+
+    int delete(Long id);
+
+    int deleteByMajorId(Long majorId);
+
+    int deleteByCollegeId(Long collegeId);
 }

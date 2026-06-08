@@ -74,6 +74,14 @@ public class AcademicStructureServiceImpl implements AcademicStructureService {
     }
 
     @Override
+    @Transactional
+    public void deleteMajor(Long id) {
+        getExistingMajor(id);
+        classGroupMapper.deleteByMajorId(id);
+        majorMapper.delete(id);
+    }
+
+    @Override
     public List<ClassGroupVO> listEnabledClasses(String collegeName, String majorName) {
         requireEnabledMajor(collegeName, majorName);
         return classGroupMapper.findEnabledByMajor(collegeName.trim(), majorName.trim()).stream().map(this::toClassGroupVO).toList();
@@ -104,6 +112,13 @@ public class AcademicStructureServiceImpl implements AcademicStructureService {
         fillClassGroup(classGroup, classGroupDTO);
         classGroupMapper.update(classGroup);
         return toClassGroupVO(classGroupMapper.findById(id));
+    }
+
+    @Override
+    @Transactional
+    public void deleteClassGroup(Long id) {
+        getExistingClassGroup(id);
+        classGroupMapper.delete(id);
     }
 
     @Override

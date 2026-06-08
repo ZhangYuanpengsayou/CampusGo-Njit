@@ -197,6 +197,37 @@ textarea {
     background: #111;
 }
 
+.hero-flip-grid {
+    position: absolute;
+    top: 318px;
+    right: max(28px, calc((100vw - 1140px) / 2));
+    z-index: 2;
+    display: grid;
+    grid-template-columns: repeat(20, 18px);
+    grid-template-rows: repeat(5, 18px);
+    gap: 5px;
+    perspective: 760px;
+    pointer-events: none;
+}
+
+.flip-tile {
+    grid-column: var(--tile-col);
+    grid-row: var(--tile-row);
+    width: 18px;
+    aspect-ratio: 1;
+    border-radius: 5px;
+    background: #111;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.24);
+    transform-origin: center;
+    will-change: transform, opacity;
+}
+
+.flip-tile.light {
+    background: rgba(255, 255, 255, 0.94);
+    border-color: rgba(255, 255, 255, 0.46);
+}
+
 .hero-slide,
 .hero-carousel .carousel-inner {
     min-height: 520px;
@@ -224,7 +255,7 @@ textarea {
 
 .hero-content {
     position: relative;
-    z-index: 1;
+    z-index: 3;
     min-height: 520px;
     display: flex;
     flex-direction: column;
@@ -256,16 +287,35 @@ textarea {
 }
 
 .hero-indicators {
+    z-index: 4;
     margin-bottom: 22px;
+    gap: 8px;
 }
 
-.hero-indicators [data-bs-target] {
-    width: 28px;
-    height: 4px;
+.hero-indicators button {
+    width: 30px;
+    height: 5px;
+    margin: 0;
+    padding: 0;
     border-radius: 999px;
+    border: 0;
+    background-color: rgba(255, 255, 255, 0.46);
+    opacity: 1;
+    transition: width 180ms ease, background-color 180ms ease, transform 180ms ease;
+}
+
+.hero-indicators button.active {
+    width: 42px;
+    background-color: rgba(255, 255, 255, 0.96);
+}
+
+.hero-indicators button:hover {
+    background-color: rgba(255, 255, 255, 0.78);
+    transform: translateY(-1px);
 }
 
 .hero-control {
+    z-index: 4;
     width: 8%;
 }
 
@@ -284,6 +334,18 @@ textarea {
 .workspace,
 .auth-page {
     padding: 42px 0;
+}
+
+.section-heading,
+.notice-card,
+.module-tabs,
+.form-card,
+.list-card,
+.auth-copy,
+.auth-form,
+.profile-card,
+.workspace-heading {
+    will-change: transform, opacity;
 }
 
 .section-heading,
@@ -694,6 +756,12 @@ textarea {
     }
 }
 
+@media (max-width: 768px) {
+    .hero-control {
+        display: none;
+    }
+}
+
 @media (max-width: 640px) {
     .hero-carousel,
     .hero-slide,
@@ -704,6 +772,19 @@ textarea {
 
     .hero-content h1 {
         font-size: 42px;
+    }
+
+    .hero-flip-grid {
+        top: 386px;
+        right: 18px;
+        grid-template-columns: repeat(20, 13px);
+        grid-template-rows: repeat(5, 13px);
+        gap: 4px;
+    }
+
+    .flip-tile {
+        width: 13px;
+        border-radius: 3px;
     }
 
     .grid-2 {

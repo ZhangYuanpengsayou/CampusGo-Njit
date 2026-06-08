@@ -8,6 +8,7 @@ import com.zane.dto.MajorDTO;
 import com.zane.service.AcademicStructureService;
 import com.zane.vo.ClassGroupVO;
 import com.zane.vo.MajorVO;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -52,6 +53,13 @@ public class AcademicStructureController {
         return Result.success("修改成功", academicStructureService.updateMajor(id, majorDTO));
     }
 
+    @DeleteMapping("/majors/{id}")
+    @RequireRole(RoleConstants.ADMIN)
+    public Result<Void> deleteMajor(@PathVariable Long id) {
+        academicStructureService.deleteMajor(id);
+        return Result.success("删除成功", null);
+    }
+
     @GetMapping("/classes")
     public Result<List<ClassGroupVO>> listEnabledClasses(@RequestParam String college, @RequestParam String major) {
         return Result.success(academicStructureService.listEnabledClasses(college, major));
@@ -73,5 +81,12 @@ public class AcademicStructureController {
     @RequireRole(RoleConstants.ADMIN)
     public Result<ClassGroupVO> updateClassGroup(@PathVariable Long id, @RequestBody ClassGroupDTO classGroupDTO) {
         return Result.success("修改成功", academicStructureService.updateClassGroup(id, classGroupDTO));
+    }
+
+    @DeleteMapping("/classes/{id}")
+    @RequireRole(RoleConstants.ADMIN)
+    public Result<Void> deleteClassGroup(@PathVariable Long id) {
+        academicStructureService.deleteClassGroup(id);
+        return Result.success("删除成功", null);
     }
 }

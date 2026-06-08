@@ -58,4 +58,20 @@
             status = #{status}
         WHERE id = #{id}
     </update>
+
+    <delete id="delete">
+        DELETE FROM class_groups
+        WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteByMajorId">
+        DELETE FROM class_groups
+        WHERE major_id = #{majorId}
+    </delete>
+
+    <delete id="deleteByCollegeId">
+        DELETE g FROM class_groups g
+        JOIN majors m ON g.major_id = m.id
+        WHERE m.college_id = #{collegeId}
+    </delete>
 </mapper>

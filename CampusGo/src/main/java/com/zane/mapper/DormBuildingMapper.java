@@ -17,4 +17,6 @@ public interface DormBuildingMapper {
     int insert(DormBuilding dormBuilding);
 
     int update(DormBuilding dormBuilding);
+
+    int delete(Long id);
 }

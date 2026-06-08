@@ -17,4 +17,6 @@ public interface CollegeMapper {
     int insert(College college);
 
     int update(College college);
+
+    int delete(Long id);
 }

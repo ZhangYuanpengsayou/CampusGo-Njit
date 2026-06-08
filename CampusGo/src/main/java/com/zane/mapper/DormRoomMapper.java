@@ -18,4 +18,8 @@ public interface DormRoomMapper {
     int insert(DormRoom dormRoom);
 
     int update(DormRoom dormRoom);
+
+    int delete(Long id);
+
+    int deleteByBuildingId(Long buildingId);
 }

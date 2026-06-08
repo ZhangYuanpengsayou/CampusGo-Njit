@@ -18,4 +18,8 @@ public interface MajorMapper {
     int insert(Major major);
 
     int update(Major major);
+
+    int delete(Long id);
+
+    int deleteByCollegeId(Long collegeId);
 }

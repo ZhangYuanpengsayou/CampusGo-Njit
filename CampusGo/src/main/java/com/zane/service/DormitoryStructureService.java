@@ -17,6 +17,8 @@ public interface DormitoryStructureService {
 
     DormBuildingVO updateBuilding(Long id, DormBuildingDTO dormBuildingDTO);
 
+    void deleteBuilding(Long id);
+
     List<DormRoomVO> listEnabledRooms(String buildingName);
 
     List<DormRoomVO> listAllRooms();
@@ -24,6 +26,8 @@ public interface DormitoryStructureService {
     DormRoomVO createRoom(DormRoomDTO dormRoomDTO);
 
     DormRoomVO updateRoom(Long id, DormRoomDTO dormRoomDTO);
+
+    void deleteRoom(Long id);
 
     void requireEnabledDormRoom(String buildingName, String roomNo);
 }
