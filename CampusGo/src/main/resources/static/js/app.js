@@ -66,6 +66,8 @@ createApp({
             contentAnimationTimer: null,
             contentScrollTriggers: [],
             scrollTriggerRegistered: false,
+            loginPasswordVisible: false,
+            registerPasswordVisible: false,
             studentTab: "leave",
             adminTab: "announcements",
             loginForm: { username: "", password: "" },
@@ -112,6 +114,9 @@ createApp({
     updated() {
         this.refreshIcons();
         this.queueContentAnimation();
+        if (this.view === "auth") {
+            this.$nextTick(() => this.initMonsterAnimation());
+        }
     },
     methods: {
         async apiCall(action, successMessage) {
@@ -241,7 +246,83 @@ createApp({
             await this.loadMe();
             this.routeByRole();
         },
+        initMonsterAnimation() {
+            if (!window.CampusGoMonsterAnimation) {
+                return;
+            }
+            window.CampusGoMonsterAnimation.init({
+                charPurple: "#char-purple",
+                facePurple: "#face-purple",
+                charBlack: "#char-black",
+                faceBlack: "#face-black",
+                charOrange: "#char-orange",
+                faceOrange: "#face-orange",
+                charYellow: "#char-yellow",
+                faceYellow: "#face-yellow",
+                mouthYellow: "#mouth-yellow"
+            });
+        },
+        setMonsterEmailFocus(isFocused) {
+            if (window.CampusGoMonsterAnimation) {
+                window.CampusGoMonsterAnimation.setEmailFocus(isFocused);
+            }
+        },
+        syncMonsterPassword(event, isVisible = null) {
+            if (!window.CampusGoMonsterAnimation || !event || !event.target) {
+                return;
+            }
+            const visible = isVisible === null ? event.target.type === "text" : isVisible;
+            window.CampusGoMonsterAnimation.updatePasswordState(event.target.value.length, visible);
+        },
+        togglePasswordVisibility(type) {
+            if (type === "login") {
+                this.loginPasswordVisible = !this.loginPasswordVisible;
+                if (window.CampusGoMonsterAnimation) {
+                    window.CampusGoMonsterAnimation.updatePasswordState(this.loginForm.password.length, this.loginPasswordVisible);
+                }
+            } else {
+                this.registerPasswordVisible = !this.registerPasswordVisible;
+                if (window.CampusGoMonsterAnimation) {
+                    window.CampusGoMonsterAnimation.updatePasswordState(this.registerForm.password.length, this.registerPasswordVisible);
+                }
+            }
+            this.$nextTick(() => this.refreshIcons());
+        },
+        isValidEmail(email) {
+            if (!email) {
+                return true;
+            }
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+        },
+        isValidPassword(password) {
+            return typeof password === "string" && password.length > 10 && /[A-Za-z]/.test(password);
+        },
+        validateRegisterForm() {
+            if (!this.isValidPassword(this.registerForm.password)) {
+                this.showToast("密码必须超过10个字符且包含字母", "error");
+                return false;
+            }
+            if (this.registerForm.password !== this.registerForm.confirmPassword) {
+                this.showToast("两次输入的密码不一致", "error");
+                return false;
+            }
+            if (!this.isValidEmail(this.registerForm.email)) {
+                this.showToast("请输入正确的邮箱格式", "error");
+                return false;
+            }
+            return true;
+        },
+        validateProfileForm() {
+            if (!this.isValidEmail(this.profileForm.email)) {
+                this.showToast("请输入正确的邮箱格式", "error");
+                return false;
+            }
+            return true;
+        },
         async register() {
+            if (!this.validateRegisterForm()) {
+                return;
+            }
             const payload = { ...this.registerForm };
             if (payload.role === this.roles.ADMIN) {
                 payload.college = null;
@@ -259,6 +340,9 @@ createApp({
             this.goHome();
         },
         async updateProfile() {
+            if (!this.validateProfileForm()) {
+                return;
+            }
             const user = await this.apiCall(() => CampusGoApi.put("/api/users/me", this.profileForm), "资料已保存");
             if (user) {
                 this.currentUser = {
@@ -276,6 +360,7 @@ createApp({
             this.stopHeroAutoplay();
             this.authMode = mode;
             this.view = "auth";
+            this.$nextTick(() => this.initMonsterAnimation());
         },
         goHome() {
             this.closeMainNav();

@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/css/campusgo.css?v=20260608-content-motion">
+    <link rel="stylesheet" href="/css/campusgo.css?v=20260609-monster-integrated">
 </head>
 <body>
 <div id="app" v-cloak>
@@ -138,6 +138,33 @@
                 <div class="auth-copy">
                     <h1>{{ authMode === 'login' ? '登录 CampusGo' : '创建 CampusGo 账号' }}</h1>
                     <p>请选择角色并使用学校事务账号进入系统。学生与教师的学院信息来自管理员维护的学院列表。</p>
+                    <div class="monster-stage" aria-hidden="true">
+                        <div id="char-purple" class="monster-character monster-purple">
+                            <div id="face-purple" class="monster-face">
+                                <span class="monster-eye eye-purple"><span class="pupil pupil-purple" data-max-dist="6"></span></span>
+                                <span class="monster-eye eye-purple"><span class="pupil pupil-purple" data-max-dist="6"></span></span>
+                            </div>
+                        </div>
+                        <div id="char-black" class="monster-character monster-black">
+                            <div id="face-black" class="monster-face">
+                                <span class="monster-eye eye-black"><span class="pupil pupil-black" data-max-dist="6"></span></span>
+                                <span class="monster-eye eye-black"><span class="pupil pupil-black" data-max-dist="6"></span></span>
+                            </div>
+                        </div>
+                        <div id="char-orange" class="monster-character monster-orange">
+                            <div id="face-orange" class="monster-face">
+                                <span class="monster-eye eye-orange"><span class="pupil pupil-orange" data-max-dist="5"></span></span>
+                                <span class="monster-eye eye-orange"><span class="pupil pupil-orange" data-max-dist="5"></span></span>
+                            </div>
+                        </div>
+                        <div id="char-yellow" class="monster-character monster-yellow">
+                            <div id="face-yellow" class="monster-face">
+                                <span class="monster-eye eye-yellow"><span class="pupil pupil-yellow" data-max-dist="5"></span></span>
+                                <span class="monster-eye eye-yellow"><span class="pupil pupil-yellow" data-max-dist="5"></span></span>
+                            </div>
+                            <span id="mouth-yellow" class="monster-mouth"></span>
+                        </div>
+                    </div>
                 </div>
                 <div class="auth-form">
                     <div class="segmented">
@@ -146,8 +173,15 @@
                     </div>
 
                     <form v-if="authMode === 'login'" @submit.prevent="login" class="form-stack">
-                        <label>账号<input class="form-control cg-input" v-model="loginForm.username" autocomplete="username"></label>
-                        <label>密码<input class="form-control cg-input" type="password" v-model="loginForm.password" autocomplete="current-password"></label>
+                        <label>账号<input class="form-control cg-input" v-model="loginForm.username" autocomplete="username" @focus="setMonsterEmailFocus(true)" @blur="setMonsterEmailFocus(false)"></label>
+                        <label>密码
+                            <span class="password-field">
+                                <input class="form-control cg-input" :type="loginPasswordVisible ? 'text' : 'password'" v-model="loginForm.password" autocomplete="current-password" @input="syncMonsterPassword($event)" @focus="syncMonsterPassword($event)" @blur="syncMonsterPassword($event)">
+                                <button class="password-toggle" type="button" :title="loginPasswordVisible ? '隐藏密码' : '显示密码'" @click="togglePasswordVisibility('login')">
+                                    <i :data-lucide="loginPasswordVisible ? 'eye-off' : 'eye'"></i>
+                                </button>
+                            </span>
+                        </label>
                         <button class="btn btn-primary-wide" type="submit" :disabled="loading">登录</button>
                     </form>
 
@@ -161,11 +195,18 @@
                         </label>
                         <div class="grid-2">
                             <label>账号<input class="form-control cg-input" v-model="registerForm.username"></label>
-                            <label>密码<input class="form-control cg-input" type="password" v-model="registerForm.password"></label>
-                            <label>确认密码<input class="form-control cg-input" type="password" v-model="registerForm.confirmPassword"></label>
+                            <label>密码
+                                <span class="password-field">
+                                    <input class="form-control cg-input" :type="registerPasswordVisible ? 'text' : 'password'" v-model="registerForm.password" minlength="11" pattern="(?=.*[A-Za-z]).{11,}" title="密码必须超过10个字符且包含字母" @input="syncMonsterPassword($event)" @focus="syncMonsterPassword($event)" @blur="syncMonsterPassword($event)">
+                                    <button class="password-toggle" type="button" :title="registerPasswordVisible ? '隐藏密码' : '显示密码'" @click="togglePasswordVisibility('register')">
+                                        <i :data-lucide="registerPasswordVisible ? 'eye-off' : 'eye'"></i>
+                                    </button>
+                                </span>
+                            </label>
+                            <label>确认密码<input class="form-control cg-input" type="password" v-model="registerForm.confirmPassword" minlength="11" pattern="(?=.*[A-Za-z]).{11,}" title="密码必须超过10个字符且包含字母"></label>
                             <label>姓名<input class="form-control cg-input" v-model="registerForm.realName"></label>
                             <label>手机<input class="form-control cg-input" v-model="registerForm.phone"></label>
-                            <label>邮箱<input class="form-control cg-input" v-model="registerForm.email"></label>
+                            <label>邮箱<input class="form-control cg-input" type="email" v-model="registerForm.email" @focus="setMonsterEmailFocus(true)" @blur="setMonsterEmailFocus(false)"></label>
                             <label v-if="registerForm.role === roles.TEACHER || registerForm.role === roles.ADMIN">申请码
                                 <input class="form-control cg-input" v-model="registerForm.applicationCode" placeholder="请输入申请码">
                             </label>
@@ -791,7 +832,7 @@
                     <div class="grid-2">
                         <label>姓名<input class="form-control cg-input" v-model="profileForm.realName"></label>
                         <label>手机<input class="form-control cg-input" v-model="profileForm.phone"></label>
-                        <label>邮箱<input class="form-control cg-input" v-model="profileForm.email"></label>
+                        <label>邮箱<input class="form-control cg-input" type="email" v-model="profileForm.email"></label>
                         <label v-if="currentUser && currentUser.role !== roles.ADMIN">学院
                             <select class="form-select cg-input" v-model="profileForm.college" @change="onProfileCollegeChange">
                                 <option v-for="college in colleges" :key="college.id" :value="college.name">{{ college.name }}</option>
@@ -936,6 +977,7 @@
 <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/ScrollTrigger.min.js"></script>
 <script src="/js/api.js"></script>
-<script src="/js/app.js?v=20260608-delete-ops"></script>
+<script src="/js/monster-animation.js?v=20260609-monster-integrated"></script>
+<script src="/js/app.js?v=20260609-monster-integrated"></script>
 </body>
 </html>
