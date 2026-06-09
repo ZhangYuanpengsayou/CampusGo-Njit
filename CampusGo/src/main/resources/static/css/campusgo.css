@@ -433,6 +433,8 @@ textarea {
 }
 
 .auth-copy {
+    display: flex;
+    flex-direction: column;
     padding: 52px;
     background: #1d1d1f;
     color: #fff;
@@ -448,6 +450,163 @@ textarea {
     margin-top: 20px;
     color: rgba(255, 255, 255, 0.74);
     line-height: 1.8;
+}
+
+.monster-stage {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 430px;
+    margin: 30px -52px -52px;
+    overflow: hidden;
+    border-radius: 0;
+    background: #1d1d1f;
+}
+
+.monster-stage::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 10;
+    height: 44px;
+    background: #1d1d1f;
+}
+
+.monster-character {
+    position: absolute;
+    bottom: 0;
+    border-radius: 8px 8px 0 0;
+    transform-origin: 50% 100%;
+    transition: height 0.28s ease, transform 0.2s ease;
+    will-change: transform, height;
+}
+
+.monster-purple {
+    left: clamp(112px, 30%, 210px);
+    z-index: 1;
+    width: 156px;
+    height: 304px;
+    background: #6738ef;
+}
+
+.monster-black {
+    left: clamp(216px, 50%, 340px);
+    z-index: 2;
+    width: 116px;
+    height: 252px;
+    background: #666a73;
+    border-radius: 8px 8px 0 0;
+}
+
+.monster-orange {
+    left: clamp(12px, 8%, 58px);
+    z-index: 4;
+    width: 232px;
+    height: 166px;
+    border-radius: 126px 126px 0 0;
+    background: #ff9864;
+}
+
+.monster-yellow {
+    right: clamp(12px, 8%, 58px);
+    z-index: 5;
+    width: 148px;
+    height: 190px;
+    border-radius: 86px 86px 0 0;
+    background: #e8dc4f;
+}
+
+.monster-face {
+    position: absolute;
+    display: flex;
+    gap: 22px;
+    align-items: center;
+    transition: left 0.16s ease, top 0.16s ease;
+    will-change: left, top;
+}
+
+.monster-eye {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #fff;
+    transition: height 0.12s ease;
+}
+
+.eye-black {
+    height: 16px;
+}
+
+.eye-orange,
+.eye-yellow {
+    width: 9px;
+    height: 9px;
+    background: #202025;
+}
+
+.pupil {
+    width: 5px;
+    height: 5px;
+    border-radius: 999px;
+    background: #111113;
+    transition: opacity 0.1s ease;
+    will-change: transform;
+}
+
+.eye-orange .pupil,
+.eye-yellow .pupil {
+    display: none;
+}
+
+.monster-mouth {
+    position: absolute;
+    display: block;
+    width: 64px;
+    height: 2px;
+    border: 0;
+    border-radius: 999px;
+    background: #202025;
+    transition: left 0.16s ease, top 0.16s ease;
+}
+
+.password-field {
+    position: relative;
+    display: block;
+}
+
+.password-field .cg-input {
+    padding-right: 48px;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    display: inline-grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--cg-muted);
+    transform: translateY(-50%);
+}
+
+.password-toggle:hover {
+    background: #f2f2f4;
+    color: var(--cg-text);
+}
+
+.password-toggle svg {
+    width: 18px;
+    height: 18px;
 }
 
 .auth-form,
@@ -754,6 +913,16 @@ textarea {
         max-width: 640px;
         font-size: 56px;
     }
+
+    .monster-stage {
+        min-height: 360px;
+        margin: 28px -52px -52px;
+    }
+
+    .monster-character {
+        transform: scale(0.82);
+        transform-origin: 50% 100%;
+    }
 }
 
 @media (max-width: 768px) {
@@ -796,6 +965,11 @@ textarea {
     .form-card,
     .list-card {
         padding: 22px;
+    }
+
+    .monster-stage {
+        min-height: 340px;
+        margin: 24px -22px -22px;
     }
 
     .table-actions {

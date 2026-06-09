@@ -3,6 +3,7 @@ package com.zane.service.impl;
 import com.zane.exception.BusinessException;
 import com.zane.service.FileStorageService;
 import com.zane.vo.FileUploadVO;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,18 +26,25 @@ public class FileStorageServiceImpl implements FileStorageService {
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png");
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of("image/jpeg", "image/png");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private static final Path UPLOAD_ROOT = Path.of("uploads");
-    private static final Path REPAIR_UPLOAD_ROOT = UPLOAD_ROOT.resolve("repair");
-    private static final Path CAROUSEL_UPLOAD_ROOT = UPLOAD_ROOT.resolve("carousel");
+
+    private final Path uploadRoot;
+    private final Path repairUploadRoot;
+    private final Path carouselUploadRoot;
+
+    public FileStorageServiceImpl(@Value("${campusgo.upload.root:uploads}") String uploadRoot) {
+        this.uploadRoot = Path.of(uploadRoot).toAbsolutePath().normalize();
+        this.repairUploadRoot = this.uploadRoot.resolve("repair");
+        this.carouselUploadRoot = this.uploadRoot.resolve("carousel");
+    }
 
     @Override
     public FileUploadVO uploadRepairPhoto(MultipartFile file) {
-        return storeImage(file, REPAIR_UPLOAD_ROOT, "/uploads/repair/", "报修照片上传失败");
+        return storeImage(file, repairUploadRoot, "/uploads/repair/", "报修照片上传失败");
     }
 
     @Override
     public FileUploadVO uploadCarouselImage(MultipartFile file) {
-        return storeImage(file, CAROUSEL_UPLOAD_ROOT, "/uploads/carousel/", "轮播图上传失败");
+        return storeImage(file, carouselUploadRoot, "/uploads/carousel/", "轮播图上传失败");
     }
 
     private FileUploadVO storeImage(MultipartFile file, Path uploadRoot, String publicPrefix, String errorMessage) {
@@ -48,7 +56,7 @@ public class FileStorageServiceImpl implements FileStorageService {
         Path targetDir = uploadRoot.resolve(datePath).normalize();
         Path targetFile = targetDir.resolve(filename).normalize();
 
-        if (!targetFile.startsWith(uploadRoot.normalize())) {
+        if (!targetFile.startsWith(uploadRoot)) {
             throw new BusinessException("文件路径不正确");
         }
 

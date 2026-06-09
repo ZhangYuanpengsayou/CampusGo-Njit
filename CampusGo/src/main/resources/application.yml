@@ -21,6 +21,8 @@ mybatis:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
 campusgo:
+  upload:
+    root: E:/foreign lessons/JavaWeb/Project/CampusGo-Njit/uploads
   register:
     teacher-application-code: TEACHER2026
     admin-application-code: ADMIN2026
